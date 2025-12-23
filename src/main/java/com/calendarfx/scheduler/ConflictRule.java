@@ -1,8 +1,16 @@
 package com.calendarfx.scheduler;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ConflictRule {
 
-    public ConflictRule(FieldType field, Operator operator, String value, boolean active) {
+    @JsonCreator
+    public ConflictRule(
+            @JsonProperty("field") FieldType field,
+            @JsonProperty("operator") Operator operator,
+            @JsonProperty("value") String value,
+            @JsonProperty("active") boolean active) {
         this.field = field;
         this.operator = operator;
         this.value = value;

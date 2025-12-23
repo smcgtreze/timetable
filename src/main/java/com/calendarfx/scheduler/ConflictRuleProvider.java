@@ -35,7 +35,8 @@ public class ConflictRuleProvider implements FormProvider {
     private final int height;
     private final int buttonSpacing;
 
-    private final List<ConflictRule> rules = new ArrayList<>();
+    private List<ConflictRule> rules = new ArrayList<>();
+    private VBox ruleList;
 
     public ConflictRuleProvider(List<String> preferredShift, int width, int height, int buttonSpacing) {
         this.preferredShift = preferredShift;
@@ -50,6 +51,13 @@ public class ConflictRuleProvider implements FormProvider {
 
     @Override
     public Form createForm() {
+        ruleList = new VBox(5);
+        ruleList.setPadding(new Insets(this.buttonSpacing, 0, 0, 0));
+
+        rules.forEach((rule) -> {
+            createSupportButtons(ruleList, rule);
+        });
+
         return Form.of(
         ).title("Conflict Rules");
     }
@@ -57,9 +65,6 @@ public class ConflictRuleProvider implements FormProvider {
     @Override
     public void showFormWindow(Stage stage, Form form, Runnable onSave) {
         FormRenderer renderer = new FormRenderer(form);
-
-        VBox ruleList = new VBox(5);
-        ruleList.setPadding(new Insets(this.buttonSpacing, 0, 0, 0));
 
         ComboBox<ConflictRule.FieldType> fieldBox = new ComboBox<>();
         fieldBox.getItems().addAll(ConflictRule.FieldType.values());
@@ -147,10 +152,18 @@ public class ConflictRuleProvider implements FormProvider {
         );
         rules.add(rule);
 
-        // UI entry for current rule
-        HBox ruleEntry = new HBox(10);
-        ruleEntry.setAlignment(Pos.CENTER_LEFT);
+        // UI entry for support of current rule
+        createSupportButtons(ruleList, rule);
 
+        if (!skipClear) {
+            fieldBox.setValue(null);
+            operatorBox.setValue(null);
+            valueField.clear();
+            activeBox.setSelected(true);
+        }
+    }
+
+    private void createSupportButtons(VBox ruleList, ConflictRule rule) {
         Label ruleLabel = new Label(formatRule(rule));
 
         CheckBox activeToggle = new CheckBox("Active");
@@ -162,6 +175,9 @@ public class ConflictRuleProvider implements FormProvider {
 
         Button deleteButton = new Button("Delete");
         deleteButton.setTooltip(new Tooltip("Delete related rule"));
+
+        HBox ruleEntry = new HBox(10);
+        ruleEntry.setAlignment(Pos.CENTER_LEFT);
 
         // EDIT RULE
         editButton.setOnAction(e -> {
@@ -176,13 +192,6 @@ public class ConflictRuleProvider implements FormProvider {
 
         ruleEntry.getChildren().addAll(ruleLabel, activeToggle, editButton, deleteButton);
         ruleList.getChildren().add(ruleEntry);
-
-        if (!skipClear) {
-            fieldBox.setValue(null);
-            operatorBox.setValue(null);
-            valueField.clear();
-            activeBox.setSelected(true);
-        }
     }
 
     private void editRule(ConflictRule rule, Label ruleLabel) {
@@ -249,6 +258,10 @@ public class ConflictRuleProvider implements FormProvider {
 
     public List<ConflictRule> getRules() {
         return Collections.unmodifiableList(rules);
+    }
+
+    public void setRules( final List<ConflictRule> conflictRules) {
+        this.rules = conflictRules;
     }
 
     public void deleteRule(ConflictRule rule) {
