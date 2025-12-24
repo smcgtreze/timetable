@@ -11,6 +11,7 @@ import com.calendarfx.view.DayViewBase.EarlyLateHoursStrategy;
 import com.calendarfx.view.DetailedWeekView;
 import com.calendarfx.view.WeekView;
 import com.dlsc.formsfx.model.structure.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.brouillard.oss.cssfx.CSSFX;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
@@ -26,6 +27,7 @@ import javafx.stage.Stage;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class CalendarApp extends Application {
 
@@ -33,6 +35,7 @@ public class CalendarApp extends Application {
     public static final String NAME_LABEL = "Name";
     public static final String GREAT_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_2 = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
+    public static final String GREAT_BUTTON_STYLE_3 = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final int PREFERED_BUTTON_SIZE = 50;
     private static final int ENTRY_CLICK_COUNT = 2;
     private static final int WIDTH = 1300;
@@ -40,13 +43,14 @@ public class CalendarApp extends Application {
     private static final String TITLE = "Calendar";
     private static final int BUTTON_SPACING = 10;
     public static final String WARNING_SIGN = "⚠";
+    public static final String REFRESH_SIGN ="🗘";
     public static final String SHOCK_SIGN = "⚡";
     public static final String PLUS_SIGN = "+";
     private static List<GreatCalendar> cachedCalendars;
     private static PersistenceManager persistenceManager;
     private static EventHandler<ActionEvent> cachedPersonHandler;
     private final List<String> preferredShift = Arrays.asList("nineToFive", "nineToSix", "eightToFour", "eightToFive");
-    private static final  Map<String, Object> personForms = new HashMap<>();
+    private static List<Person> personForms;
     private static List<ConflictRule> ruleForms;
     private static CalendarSource familyCalendarSource;
     private static EventHandler<ActionEvent> cachedConflictHandler;
@@ -76,18 +80,10 @@ public class CalendarApp extends Application {
             Form form = formProvider.createForm();
             formProvider.showFormWindow(primaryStage, form, () -> {
 
-                List<? extends DataField<?, ?, ?>> dataFields = getDataFields(form);
-                dataFields.forEach(df -> personForms.put(df.getLabel(), df.getValue()));
-
-                String name = dataFields.stream()
-                        .filter(df -> NAME_LABEL.equals(df.getLabel()))
-                        .map(DataField::getValue)
-                        .map(Object::toString)
-                        .findFirst()
-                        .orElse(UNKNOWN);
-
-                Calendar calendar = createCalendar(name, List.of() );
+                String name = cachePersonForm(form);
+                Calendar calendar = createCalendar(name, List.of());
                 familyCalendarSource.getCalendars().add(calendar);
+
                 GreatCalendar gc = persistenceManager.calendarSerializer.fromCalendar(calendar);
                 cachedCalendars.add(gc);
                 setupPrimaryStage(primaryStage, calendarView, null, null);
@@ -112,6 +108,32 @@ public class CalendarApp extends Application {
         };
 
         setupPrimaryStage(primaryStage, calendarView, addPersonHandler, addConflictRuleHandler);
+    }
+
+    private String cachePersonForm(Form form) {
+        List<? extends DataField<?, ?, ?>> dataFields = getDataFields(form);
+
+        // Extract the data fields from the form
+        String name = getField( dataFields,"Name");
+        String workingHours = getField( dataFields,"Working Hours");
+        String email = getField( dataFields,"Email");
+        String job = getField( dataFields,"Job");
+        String age = getField( dataFields,"Age");
+
+        Person person = new Person(Integer.parseInt(workingHours), email, job, Integer.parseInt(age), name );
+
+        // Store under that calendar name
+        personForms.add(person);
+        return name;
+    }
+
+    private String getField(List<? extends DataField<?, ?, ?>> dataFields, String fieldName) {
+        return dataFields.stream()
+                .filter(df -> fieldName.equals(df.getLabel()))
+                .map(DataField::getValue)
+                .map(Object::toString)
+                .findFirst()
+                .orElse("Unknown");
     }
 
     private void refreshConflictsInView() {
@@ -143,15 +165,17 @@ public class CalendarApp extends Application {
         // regain handlers from cache if required
         personHandler = ( personHandler == null ) ? cachedPersonHandler : personHandler;
         conflictHandler = ( conflictHandler == null ) ? cachedConflictHandler : conflictHandler;
+        EventHandler<ActionEvent> refreshHandler = e -> { refreshConflictsInView();};
 
         Button addButton = createButton(personHandler, PLUS_SIGN,"Add a new personal calendar", GREAT_BUTTON_STYLE);
         Button conflictsButton = createButton(conflictHandler, SHOCK_SIGN,"Add/Modify a calendar conflict", GREAT_BUTTON_STYLE_2);
+        Button refreshButton = createButton(refreshHandler, REFRESH_SIGN,"Refresh calendar conflicts", GREAT_BUTTON_STYLE_3);
 
         BorderPane root = new BorderPane();
         root.setCenter(calendarView);
 
         HBox appButtons = new HBox(BUTTON_SPACING);
-        appButtons.getChildren().addAll(addButton,conflictsButton);
+        appButtons.getChildren().addAll(addButton,conflictsButton, refreshButton);
         appButtons.setAlignment(Pos.TOP_CENTER);
         root.setTop(appButtons);
 
@@ -220,28 +244,50 @@ public class CalendarApp extends Application {
     }
 
     private boolean isConflict(Entry<?> entry) {
+        if (ruleForms == null || ruleForms.isEmpty()) return false;
+
+        boolean existsConflict = false;
+        final String calendarName = entry.getCalendar().getName();
+        Person personalProfile = personForms.stream()
+                .filter(p -> p.getName().equals(calendarName))
+                .findFirst()
+                .orElse(null);
+
         for (ConflictRule rule : ruleForms) {
             if (!rule.isActive()) continue;
 
-            final String calendarName = entry.getCalendar().getName();
             switch (rule.getField()) {
                 case NAME -> {
-                    if (calendarName.equals(rule.getValue())) {
-                        return true;
+                    existsConflict |= (calendarName.equals(rule.getValue()));
+                }
+                case WORKING_HOURS -> {
+                    if (personalProfile != null) {
+                        int workingHours = personalProfile.getWorkingHours();
+                        existsConflict |= (workingHours == Integer.parseInt(rule.getValue()));
                     }
                 }
-                case WORKING_HOURS -> {}
-                case PREFERRED_SHIFT -> {}
-                case JOB -> {}
+                case PREFERRED_SHIFT -> {
+                    if (personalProfile != null) {
+                        Object preferredShift = personalProfile.getEmail();
+                        existsConflict |= (preferredShift != null && preferredShift.toString().equals(rule.getValue()));
+                    }
+                }
+                case JOB -> {
+                    if (personalProfile != null) {
+                        Object job = personalProfile.getJob();
+                        existsConflict |= (job != null && job.toString().equals(rule.getValue()));
+                    }
+                }
             }
         }
-        return false;
+        return existsConflict;
     }
 
     public static void main(String[] args) {
         persistenceManager = new PersistenceManager();
         cachedCalendars = persistenceManager.loadInformation(GreatCalendar.class);
         ruleForms = persistenceManager.loadInformation(ConflictRule.class);
+        personForms = persistenceManager.loadInformation(Person.class);
 
         launch(args);
 
@@ -251,5 +297,6 @@ public class CalendarApp extends Application {
 
         persistenceManager.saveInformation(cachedCalendars);
         persistenceManager.saveInformation(ruleForms);
+        persistenceManager.saveInformation(personForms);
     }
 }
