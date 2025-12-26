@@ -3,7 +3,7 @@ package com.calendarfx.scheduler;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Person {
+public class PersonalProfile {
 
     @JsonProperty("Working Hours")
     private final int workingHours;
@@ -20,19 +20,24 @@ public class Person {
     @JsonProperty("Name")
     private final String name;
 
+    @JsonProperty("Preferred Shift")
+    private final String preferredShift;
+
     @JsonCreator
-    public Person(
+    public PersonalProfile(
             @JsonProperty("Working Hours") int workingHours,
             @JsonProperty("Email") String email,
             @JsonProperty("Job") String job,
             @JsonProperty("Age") int age,
-            @JsonProperty("Name") String name
+            @JsonProperty("Name") String name,
+            @JsonProperty("Preferred Shift") String preferredShift
     ) {
         this.workingHours = workingHours;
         this.email = email;
         this.job = job;
         this.age = age;
         this.name = name;
+        this.preferredShift = preferredShift;
     }
 
     public int getWorkingHours() {
@@ -53,5 +58,9 @@ public class Person {
 
     public String getName() {
         return name;
+    }
+
+    public String getPreferredShift() {
+        return preferredShift;
     }
 }

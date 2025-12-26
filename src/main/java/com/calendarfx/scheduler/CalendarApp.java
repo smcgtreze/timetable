@@ -6,13 +6,12 @@ import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.CalendarView;
 import com.calendarfx.view.CalendarView.Page;
-import com.calendarfx.view.DayView;
 import com.calendarfx.view.DayViewBase.EarlyLateHoursStrategy;
 import com.calendarfx.view.DetailedWeekView;
-import com.calendarfx.view.WeekView;
 import com.dlsc.formsfx.model.structure.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import fr.brouillard.oss.cssfx.CSSFX;
+import javafx.animation.Interpolator;
+import javafx.animation.RotateTransition;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -23,16 +22,14 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 public class CalendarApp extends Application {
 
-    public static final String UNKNOWN = "Unknown";
-    public static final String NAME_LABEL = "Name";
     public static final String GREAT_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_2 = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_3 = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
@@ -50,7 +47,7 @@ public class CalendarApp extends Application {
     private static PersistenceManager persistenceManager;
     private static EventHandler<ActionEvent> cachedPersonHandler;
     private final List<String> preferredShift = Arrays.asList("nineToFive", "nineToSix", "eightToFour", "eightToFive");
-    private static List<Person> personForms;
+    private static List<PersonalProfile> personForms;
     private static List<ConflictRule> ruleForms;
     private static CalendarSource familyCalendarSource;
     private static EventHandler<ActionEvent> cachedConflictHandler;
@@ -119,11 +116,12 @@ public class CalendarApp extends Application {
         String email = getField( dataFields,"Email");
         String job = getField( dataFields,"Job");
         String age = getField( dataFields,"Age");
+        String preferredShift = getField( dataFields,"Preferred Shift");
 
-        Person person = new Person(Integer.parseInt(workingHours), email, job, Integer.parseInt(age), name );
+        PersonalProfile profile = new PersonalProfile(Integer.parseInt(workingHours), email, job, Integer.parseInt(age), name, preferredShift );
 
         // Store under that calendar name
-        personForms.add(person);
+        personForms.add(profile);
         return name;
     }
 
@@ -167,9 +165,9 @@ public class CalendarApp extends Application {
         conflictHandler = ( conflictHandler == null ) ? cachedConflictHandler : conflictHandler;
         EventHandler<ActionEvent> refreshHandler = e -> { refreshConflictsInView();};
 
-        Button addButton = createButton(personHandler, PLUS_SIGN,"Add a new personal calendar", GREAT_BUTTON_STYLE);
-        Button conflictsButton = createButton(conflictHandler, SHOCK_SIGN,"Add/Modify a calendar conflict", GREAT_BUTTON_STYLE_2);
-        Button refreshButton = createButton(refreshHandler, REFRESH_SIGN,"Refresh calendar conflicts", GREAT_BUTTON_STYLE_3);
+        Button addButton = createButton(personHandler, PLUS_SIGN,"Add a new personal calendar", GREAT_BUTTON_STYLE, false);
+        Button conflictsButton = createButton(conflictHandler, SHOCK_SIGN,"Add/Modify a calendar conflict", GREAT_BUTTON_STYLE_2, false);
+        Button refreshButton = createButton(refreshHandler, REFRESH_SIGN,"Refresh calendar conflicts", GREAT_BUTTON_STYLE_3, true);
 
         BorderPane root = new BorderPane();
         root.setCenter(calendarView);
@@ -194,12 +192,27 @@ public class CalendarApp extends Application {
         cachedConflictHandler = conflictHandler;
     }
 
-    private Button createButton(EventHandler<ActionEvent> handler, final String title , final String tooltip, final String style) {
+    private Button createButton(EventHandler<ActionEvent> handler, final String title , final String tooltip, final String style, final boolean hasAnimation) {
         if( title == null )
             return null;
         Button addButton = new Button(title);
         addButton.setPrefSize(PREFERED_BUTTON_SIZE, PREFERED_BUTTON_SIZE);
-        addButton.setOnAction(handler);
+
+        // Wrap the handler to add animation
+        addButton.setOnAction(event -> {
+            if (hasAnimation) {
+                RotateTransition rt = new RotateTransition(Duration.millis(400), addButton);
+                rt.setByAngle(360);
+                rt.setInterpolator(Interpolator.EASE_OUT);
+                rt.play();
+            }
+
+            // Call the original handler
+            if (handler != null) {
+                handler.handle(event);
+            }
+        });
+
         addButton.setStyle(style);
         if( tooltip != null )
             addButton.setTooltip(new Tooltip(tooltip));
@@ -213,12 +226,10 @@ public class CalendarApp extends Application {
         calendarView.setEnableTimeZoneSupport(false);
         calendarView.setCreateEntryClickCount(ENTRY_CLICK_COUNT);
         calendarView.setShowAddCalendarButton(false);
-        DayView dayView = calendarView.getDayPage().getDetailedDayView().getDayView();
 
         DetailedWeekView detailedWeekView = calendarView.getWeekPage().getDetailedWeekView();
         detailedWeekView.setShowToday(true);
         detailedWeekView.setEarlyLateHoursStrategy(EarlyLateHoursStrategy.HIDE);
-        WeekView weekView = detailedWeekView.getWeekView();
         return calendarView;
     }
 
@@ -248,7 +259,7 @@ public class CalendarApp extends Application {
 
         boolean existsConflict = false;
         final String calendarName = entry.getCalendar().getName();
-        Person personalProfile = personForms.stream()
+        PersonalProfile personalProfile = personForms.stream()
                 .filter(p -> p.getName().equals(calendarName))
                 .findFirst()
                 .orElse(null);
@@ -268,7 +279,7 @@ public class CalendarApp extends Application {
                 }
                 case PREFERRED_SHIFT -> {
                     if (personalProfile != null) {
-                        Object preferredShift = personalProfile.getEmail();
+                        Object preferredShift = personalProfile.getPreferredShift();
                         existsConflict |= (preferredShift != null && preferredShift.toString().equals(rule.getValue()));
                     }
                 }
@@ -276,6 +287,12 @@ public class CalendarApp extends Application {
                     if (personalProfile != null) {
                         Object job = personalProfile.getJob();
                         existsConflict |= (job != null && job.toString().equals(rule.getValue()));
+                    }
+                }
+                case EMAIL -> {
+                    if (personalProfile != null) {
+                        Object email = personalProfile.getEmail();
+                        existsConflict |= (email != null && email.toString().equals(rule.getValue()));
                     }
                 }
             }
@@ -287,7 +304,7 @@ public class CalendarApp extends Application {
         persistenceManager = new PersistenceManager();
         cachedCalendars = persistenceManager.loadInformation(GreatCalendar.class);
         ruleForms = persistenceManager.loadInformation(ConflictRule.class);
-        personForms = persistenceManager.loadInformation(Person.class);
+        personForms = persistenceManager.loadInformation(PersonalProfile.class);
 
         launch(args);
 

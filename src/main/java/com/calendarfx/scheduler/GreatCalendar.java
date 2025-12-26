@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public class GreatCalendar {
-    private String name;
+    private final String name;
     protected List<GreatEntry> entries;
 
     @JsonCreator

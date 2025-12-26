@@ -18,7 +18,7 @@ public class ConflictRule {
     }
 
     public enum FieldType {
-        NAME, WORKING_HOURS, PREFERRED_SHIFT, JOB
+        NAME, WORKING_HOURS, PREFERRED_SHIFT, JOB, EMAIL
     }
 
     public enum Operator {
