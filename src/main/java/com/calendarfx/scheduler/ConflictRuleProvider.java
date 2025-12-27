@@ -6,6 +6,7 @@ import com.dlsc.formsfx.model.structure.Group;
 import com.dlsc.formsfx.model.structure.SingleSelectionField;
 import com.dlsc.formsfx.view.renderer.FormRenderer;
 import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -28,8 +29,6 @@ public class ConflictRuleProvider implements FormProvider {
     public static final String VALUE = "Value";
     public static final String ACTIVE = "Active";
     public static final String SAVE_AND_EXIT = "Save and Exit";
-    public static final String GREAT_BUTTON_STYLE_ORANGE = "-fx-background-color: orange; -fx-text-fill: black; -fx-font-weight: bold; -fx-font-size: 12px;";
-    public static final String GREAT_BUTTON_STYLE_RED = "-fx-background-color: red; -fx-text-fill: black; -fx-font-weight: bold; -fx-font-size: 12px;";
     private final List<String> preferredShift;
     private final int width;
     private final int height;
@@ -37,6 +36,7 @@ public class ConflictRuleProvider implements FormProvider {
 
     private List<ConflictRule> rules = new ArrayList<>();
     private VBox ruleList;
+    private ConflictResolutionCalculator calculator;
 
     public ConflictRuleProvider(List<String> preferredShift, int width, int height, int buttonSpacing) {
         this.preferredShift = preferredShift;
@@ -45,6 +45,9 @@ public class ConflictRuleProvider implements FormProvider {
         this.buttonSpacing = buttonSpacing;
     }
 
+    public void setCalculator(ConflictResolutionCalculator calculator) {
+        this.calculator = calculator;
+    }
     // ---------------------------------------------------------
     // 1. FORM CREATION
     // ---------------------------------------------------------
@@ -79,6 +82,7 @@ public class ConflictRuleProvider implements FormProvider {
 
         Button defineRuleButton = new Button("Define Conflict Rule");
         Button duplicateRuleButton = new Button("Duplicate Conflict Rule");
+        Button resolveButton = new Button("Resolve Conflicts!");
 
         GridPane ruleBuilder = new GridPane();
         ruleBuilder.setHgap(HGAP);
@@ -99,6 +103,7 @@ public class ConflictRuleProvider implements FormProvider {
 
         ruleBuilder.add(defineRuleButton, 4, 1);
         ruleBuilder.add(duplicateRuleButton, 5, 1);
+        ruleBuilder.add(resolveButton, 6, 1);
 
         Button saveButton = new Button(SAVE_AND_EXIT);
 
@@ -126,6 +131,28 @@ public class ConflictRuleProvider implements FormProvider {
         duplicateRuleButton.setOnAction(e -> {
             defineRule(fieldBox, operatorBox, valueField, activeBox, ruleList, true);
         });
+
+        resolveButton.setOnAction(e -> {
+            resolveThreadHandler();
+        });
+    }
+
+    private void resolveThreadHandler() {
+        new Thread(() -> {
+            long start = System.currentTimeMillis();
+            while (!calculator.calculate()) {
+                if (System.currentTimeMillis() - start > 30_000) {
+                    System.out.println("Timeout reached");
+                    return;
+                }
+
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        }).start();
     }
 
     private void defineRule(ComboBox<ConflictRule.FieldType> fieldBox,

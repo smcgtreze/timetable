@@ -60,13 +60,6 @@ public class EmployeeFormProvider implements FormProvider {
                                 .validate(StringLengthValidator.atLeast(2, "email_error_message"))
                 ),
                 Section.of(
-                        Field.ofIntegerType(40)
-                                .label("Working Hours")
-                                .format("format_error_message")
-                                .placeholder("population_placeholder")
-                                .required("required_error_message")
-                                .span(ColSpan.HALF)
-                                .validate(IntegerRangeValidator.atLeast(1, "population_error_message")),
                         Field.ofSingleSelectionType(preferredShift)
                                 .label("Preferred shift")
                                 .span(ColSpan.HALF)

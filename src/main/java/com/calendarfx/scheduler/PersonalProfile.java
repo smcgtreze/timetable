@@ -4,9 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PersonalProfile {
-
     @JsonProperty("Working Hours")
-    private final int workingHours;
+    private int workingHours;
 
     @JsonProperty("Email")
     private final String email;
@@ -62,5 +61,9 @@ public class PersonalProfile {
 
     public String getPreferredShift() {
         return preferredShift;
+    }
+
+    public void setWorkingHours(int workingHours) {
+        this.workingHours = workingHours;
     }
 }

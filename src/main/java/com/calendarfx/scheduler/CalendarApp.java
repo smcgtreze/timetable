@@ -24,6 +24,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,7 +34,7 @@ public class CalendarApp extends Application {
     public static final String GREAT_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_2 = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_3 = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
-    public static final int PREFERED_BUTTON_SIZE = 50;
+    public static final int PREFERRED_BUTTON_SIZE = 50;
     private static final int ENTRY_CLICK_COUNT = 2;
     private static final int WIDTH = 1300;
     private static final int HEIGHT = 1000;
@@ -46,6 +47,7 @@ public class CalendarApp extends Application {
     private static List<GreatCalendar> cachedCalendars;
     private static PersistenceManager persistenceManager;
     private static EventHandler<ActionEvent> cachedPersonHandler;
+    private static ConflictResolutionCalculator conflictCalculator;
     private final List<String> preferredShift = Arrays.asList("nineToFive", "nineToSix", "eightToFour", "eightToFive");
     private static List<PersonalProfile> personForms;
     private static List<ConflictRule> ruleForms;
@@ -103,6 +105,7 @@ public class CalendarApp extends Application {
                 setupPrimaryStage(primaryStage, calendarView, null, null);
             });
         };
+        conflictRuleProvider.setCalculator(conflictCalculator);
 
         setupPrimaryStage(primaryStage, calendarView, addPersonHandler, addConflictRuleHandler);
     }
@@ -112,13 +115,13 @@ public class CalendarApp extends Application {
 
         // Extract the data fields from the form
         String name = getField( dataFields,"Name");
-        String workingHours = getField( dataFields,"Working Hours");
+        int workingHours = 0;
         String email = getField( dataFields,"Email");
         String job = getField( dataFields,"Job");
         String age = getField( dataFields,"Age");
         String preferredShift = getField( dataFields,"Preferred Shift");
 
-        PersonalProfile profile = new PersonalProfile(Integer.parseInt(workingHours), email, job, Integer.parseInt(age), name, preferredShift );
+        PersonalProfile profile = new PersonalProfile(workingHours, email, job, Integer.parseInt(age), name, preferredShift );
 
         // Store under that calendar name
         personForms.add(profile);
@@ -139,11 +142,24 @@ public class CalendarApp extends Application {
         if(familyCalendarSource.getCalendars().isEmpty())
             return;
 
-        familyCalendarSource.getCalendars().stream()
-                .flatMap(c -> c.findEntries("").stream())
-                .forEach(entry -> ((Entry<?>) entry).setLocation(
-                        isConflict(((Entry<?>) entry)) ? WARNING_SIGN + " Conflict with one or more rules" : ""
-                ));
+        familyCalendarSource.getCalendars().forEach(calendar -> {
+            final int totalHoursInCalendar = calendar.findEntries("").stream()
+                    .mapToInt(e -> {
+                        Entry<?> entry = (Entry<?>) e;
+                        entry.setLocation(
+                                conflictCalculator.hasConflict(entry) ? WARNING_SIGN + " Conflict with one or more rules" : ""
+                        );
+                        LocalDateTime start = LocalDateTime.of(entry.getStartDate(), entry.getStartTime());
+                        LocalDateTime end   = LocalDateTime.of(entry.getEndDate(), entry.getEndTime());
+
+                        return (int) java.time.Duration.between(start, end).toHours();
+                    }).sum();
+
+            // Refresh calendar working hours
+            Optional<PersonalProfile> personalProfile = personForms.stream()
+                    .filter(p -> p.getName().equals(calendar.getName())).findFirst();
+            personalProfile.ifPresent(p -> p.setWorkingHours(totalHoursInCalendar));
+        });
     }
 
     private static List<? extends DataField<?, ?, ?>> getDataFields(Form form) {
@@ -196,7 +212,7 @@ public class CalendarApp extends Application {
         if( title == null )
             return null;
         Button addButton = new Button(title);
-        addButton.setPrefSize(PREFERED_BUTTON_SIZE, PREFERED_BUTTON_SIZE);
+        addButton.setPrefSize(PREFERRED_BUTTON_SIZE, PREFERRED_BUTTON_SIZE);
 
         // Wrap the handler to add animation
         addButton.setOnAction(event -> {
@@ -254,57 +270,14 @@ public class CalendarApp extends Application {
         return calendar;
     }
 
-    private boolean isConflict(Entry<?> entry) {
-        if (ruleForms == null || ruleForms.isEmpty()) return false;
-
-        boolean existsConflict = false;
-        final String calendarName = entry.getCalendar().getName();
-        PersonalProfile personalProfile = personForms.stream()
-                .filter(p -> p.getName().equals(calendarName))
-                .findFirst()
-                .orElse(null);
-
-        for (ConflictRule rule : ruleForms) {
-            if (!rule.isActive()) continue;
-
-            switch (rule.getField()) {
-                case NAME -> {
-                    existsConflict |= (calendarName.equals(rule.getValue()));
-                }
-                case WORKING_HOURS -> {
-                    if (personalProfile != null) {
-                        int workingHours = personalProfile.getWorkingHours();
-                        existsConflict |= (workingHours == Integer.parseInt(rule.getValue()));
-                    }
-                }
-                case PREFERRED_SHIFT -> {
-                    if (personalProfile != null) {
-                        Object preferredShift = personalProfile.getPreferredShift();
-                        existsConflict |= (preferredShift != null && preferredShift.toString().equals(rule.getValue()));
-                    }
-                }
-                case JOB -> {
-                    if (personalProfile != null) {
-                        Object job = personalProfile.getJob();
-                        existsConflict |= (job != null && job.toString().equals(rule.getValue()));
-                    }
-                }
-                case EMAIL -> {
-                    if (personalProfile != null) {
-                        Object email = personalProfile.getEmail();
-                        existsConflict |= (email != null && email.toString().equals(rule.getValue()));
-                    }
-                }
-            }
-        }
-        return existsConflict;
-    }
-
     public static void main(String[] args) {
         persistenceManager = new PersistenceManager();
+
         cachedCalendars = persistenceManager.loadInformation(GreatCalendar.class);
         ruleForms = persistenceManager.loadInformation(ConflictRule.class);
         personForms = persistenceManager.loadInformation(PersonalProfile.class);
+
+        conflictCalculator = new ConflictResolutionCalculator( ruleForms, personForms );
 
         launch(args);
 
