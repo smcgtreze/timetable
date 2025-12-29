@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class ConflictRule {
 
+    public static final String SPACE = " ";
+
     @JsonCreator
     public ConflictRule(
             @JsonProperty("field") FieldType field,
@@ -41,4 +43,8 @@ public class ConflictRule {
 
     public String getValue() { return value; }
     public void setValue(String value) { this.value = value; }
+
+    public String getFullName(){
+        return field.toString() + " has to be" + SPACE + operator.toString() + SPACE + value;
+    }
 }

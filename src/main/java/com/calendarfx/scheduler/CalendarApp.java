@@ -8,6 +8,7 @@ import com.calendarfx.view.CalendarView;
 import com.calendarfx.view.CalendarView.Page;
 import com.calendarfx.view.DayViewBase.EarlyLateHoursStrategy;
 import com.calendarfx.view.DetailedWeekView;
+import com.calendarfx.view.EntryViewBase;
 import com.dlsc.formsfx.model.structure.*;
 import fr.brouillard.oss.cssfx.CSSFX;
 import javafx.animation.Interpolator;
@@ -34,13 +35,13 @@ public class CalendarApp extends Application {
     public static final String GREAT_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_2 = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_3 = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
+    public static final String WARNING_STYLE = "-fx-background-color: rgba(255,0,0,0.3); -fx-border-color: red;";
     public static final int PREFERRED_BUTTON_SIZE = 50;
     private static final int ENTRY_CLICK_COUNT = 2;
     private static final int WIDTH = 1300;
     private static final int HEIGHT = 1000;
     private static final String TITLE = "Calendar";
     private static final int BUTTON_SPACING = 10;
-    public static final String WARNING_SIGN = "⚠";
     public static final String REFRESH_SIGN ="🗘";
     public static final String SHOCK_SIGN = "⚡";
     public static final String PLUS_SIGN = "+";
@@ -51,14 +52,14 @@ public class CalendarApp extends Application {
     private final List<String> preferredShift = Arrays.asList("nineToFive", "nineToSix", "eightToFour", "eightToFive");
     private static List<PersonalProfile> personForms;
     private static List<ConflictRule> ruleForms;
-    private static CalendarSource familyCalendarSource;
     private static EventHandler<ActionEvent> cachedConflictHandler;
+    private static CalendarView calendarView;
 
     @Override
     public void start(Stage primaryStage) {
-        CalendarView calendarView = setupCalendarView();
+        calendarView = setupCalendarView();
 
-        familyCalendarSource = new CalendarSource("Family");
+        CalendarSource familyCalendarSource = new CalendarSource("Family");
 
         calendarView.getCalendarSources().setAll(familyCalendarSource);
         calendarView.setRequestedTime(LocalTime.now());
@@ -100,11 +101,15 @@ public class CalendarApp extends Application {
 
         EventHandler<ActionEvent> addConflictRuleHandler = e -> {
             Form form = conflictRuleProvider.createForm();
+            refreshConflictsInView();
+            conflictCalculator.setCalendarView(calendarView);
             conflictRuleProvider.showFormWindow(primaryStage, form, () -> {
                 ruleForms = conflictRuleProvider.getRules();
                 setupPrimaryStage(primaryStage, calendarView, null, null);
             });
         };
+        conflictCalculator = new ConflictResolutionCalculator( ruleForms, personForms );
+        conflictCalculator.setCalendarView(calendarView);
         conflictRuleProvider.setCalculator(conflictCalculator);
 
         setupPrimaryStage(primaryStage, calendarView, addPersonHandler, addConflictRuleHandler);
@@ -139,16 +144,18 @@ public class CalendarApp extends Application {
 
     private void refreshConflictsInView() {
         // Optimize this very well !!
-        if(familyCalendarSource.getCalendars().isEmpty())
+        if(calendarView.getCalendars().isEmpty())
             return;
 
-        familyCalendarSource.getCalendars().forEach(calendar -> {
+        calendarView.getCalendars().forEach(calendar -> {
             final int totalHoursInCalendar = calendar.findEntries("").stream()
                     .mapToInt(e -> {
                         Entry<?> entry = (Entry<?>) e;
-                        entry.setLocation(
-                                conflictCalculator.hasConflict(entry) ? WARNING_SIGN + " Conflict with one or more rules" : ""
-                        );
+                        if( conflictCalculator.hasConflict(entry) ){
+                            final EntryViewBase<?> entryView = calendarView.findEntryView(entry);
+                            if (entryView != null)
+                                entryView.setStyle(WARNING_STYLE);
+                        }
                         LocalDateTime start = LocalDateTime.of(entry.getStartDate(), entry.getStartTime());
                         LocalDateTime end   = LocalDateTime.of(entry.getEndDate(), entry.getEndTime());
 
@@ -182,7 +189,7 @@ public class CalendarApp extends Application {
         EventHandler<ActionEvent> refreshHandler = e -> { refreshConflictsInView();};
 
         Button addButton = createButton(personHandler, PLUS_SIGN,"Add a new personal calendar", GREAT_BUTTON_STYLE, false);
-        Button conflictsButton = createButton(conflictHandler, SHOCK_SIGN,"Add/Modify a calendar conflict", GREAT_BUTTON_STYLE_2, false);
+        Button conflictsButton = createButton(conflictHandler, SHOCK_SIGN,"Add/Modify a calendar rule", GREAT_BUTTON_STYLE_2, false);
         Button refreshButton = createButton(refreshHandler, REFRESH_SIGN,"Refresh calendar conflicts", GREAT_BUTTON_STYLE_3, true);
 
         BorderPane root = new BorderPane();
@@ -237,7 +244,7 @@ public class CalendarApp extends Application {
     }
 
     private static CalendarView setupCalendarView() {
-        CalendarView calendarView = new CalendarView(Page.DAY, Page.WEEK, Page.MONTH );
+        CalendarView calendarView = new CalendarView(Page.DAY, Page.WEEK, Page.MONTH);
         calendarView.showWeekPage();
         calendarView.setEnableTimeZoneSupport(false);
         calendarView.setCreateEntryClickCount(ENTRY_CLICK_COUNT);
@@ -273,20 +280,27 @@ public class CalendarApp extends Application {
     public static void main(String[] args) {
         persistenceManager = new PersistenceManager();
 
-        cachedCalendars = persistenceManager.loadInformation(GreatCalendar.class);
-        ruleForms = persistenceManager.loadInformation(ConflictRule.class);
-        personForms = persistenceManager.loadInformation(PersonalProfile.class);
-
-        conflictCalculator = new ConflictResolutionCalculator( ruleForms, personForms );
+        // Deserialize and load all forms and calendars from a JSON file
+        loadInformation();
 
         launch(args);
+        // Serialize and save all forms and calendars to a JSON file
+        saveInformation();
+    }
 
-        cachedCalendars = familyCalendarSource.getCalendars().stream()
+    private static void saveInformation() {
+        cachedCalendars = calendarView.getCalendars().stream()
                 .map(persistenceManager.calendarSerializer::fromCalendar)
                 .toList();
 
         persistenceManager.saveInformation(cachedCalendars);
         persistenceManager.saveInformation(ruleForms);
         persistenceManager.saveInformation(personForms);
+    }
+
+    private static void loadInformation() {
+        cachedCalendars = persistenceManager.loadInformation(GreatCalendar.class);
+        ruleForms = persistenceManager.loadInformation(ConflictRule.class);
+        personForms = persistenceManager.loadInformation(PersonalProfile.class);
     }
 }

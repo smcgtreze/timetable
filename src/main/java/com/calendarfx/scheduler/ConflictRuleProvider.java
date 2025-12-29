@@ -1,24 +1,28 @@
 package com.calendarfx.scheduler;
 
+import com.calendarfx.model.Entry;
+import com.calendarfx.view.CalendarView;
 import com.dlsc.formsfx.model.structure.Field;
 import com.dlsc.formsfx.model.structure.Form;
 import com.dlsc.formsfx.model.structure.Group;
 import com.dlsc.formsfx.model.structure.SingleSelectionField;
 import com.dlsc.formsfx.view.renderer.FormRenderer;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-import javafx.concurrent.Task;
+import javafx.collections.MapChangeListener;
+import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class ConflictRuleProvider implements FormProvider {
 
@@ -46,6 +50,7 @@ public class ConflictRuleProvider implements FormProvider {
     }
 
     public void setCalculator(ConflictResolutionCalculator calculator) {
+
         this.calculator = calculator;
     }
     // ---------------------------------------------------------
@@ -62,7 +67,7 @@ public class ConflictRuleProvider implements FormProvider {
         });
 
         return Form.of(
-        ).title("Conflict Rules");
+        ).title("Rules");
     }
 
     @Override
@@ -80,9 +85,10 @@ public class ConflictRuleProvider implements FormProvider {
         CheckBox activeBox = new CheckBox("Active");
         activeBox.setSelected(true);
 
-        Button defineRuleButton = new Button("Define Conflict Rule");
-        Button duplicateRuleButton = new Button("Duplicate Conflict Rule");
+        Button defineRuleButton = new Button("Define Rule");
+        Button duplicateRuleButton = new Button("Duplicate Rule");
         Button resolveButton = new Button("Resolve Conflicts!");
+        Button applyButton = new Button("Apply resolutions");
 
         GridPane ruleBuilder = new GridPane();
         ruleBuilder.setHgap(HGAP);
@@ -104,6 +110,13 @@ public class ConflictRuleProvider implements FormProvider {
         ruleBuilder.add(defineRuleButton, 4, 1);
         ruleBuilder.add(duplicateRuleButton, 5, 1);
         ruleBuilder.add(resolveButton, 6, 1);
+        ruleBuilder.add(applyButton, 7, 1);
+
+        Map<String, ConflictRule> currentConflicts = calculator.getCurrentConflicts();
+        ConflictTable conflictTable = new ConflictTable(currentConflicts);
+        calculator.getCurrentConflicts().addListener((MapChangeListener<String, ConflictRule>) change -> {
+            conflictTable.refreshData(calculator.getCurrentConflicts());
+        });
 
         Button saveButton = new Button(SAVE_AND_EXIT);
 
@@ -112,11 +125,16 @@ public class ConflictRuleProvider implements FormProvider {
 
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(this.buttonSpacing));
-        layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons);
+
+        CalendarView calendarView = calculator.getCalendarView();
+        VBox.setVgrow(calendarView, Priority.ALWAYS);
+        layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons, conflictTable, calendarView);
 
         Scene scene = new Scene(layout, width, height);
+        makeCalendarViewReadOnly(calendarView);
+        calendarView.showWeekPage();
         stage.setScene(scene);
-        stage.setTitle("Conflict Rule Editor");
+        stage.setTitle("Rule Editor");
         stage.show();
 
         saveButton.setOnAction(e -> {
@@ -133,27 +151,32 @@ public class ConflictRuleProvider implements FormProvider {
         });
 
         resolveButton.setOnAction(e -> {
-            resolveThreadHandler();
+            resolveHandler();
+        });
+
+        applyButton.setOnAction(evt -> {
+            calculator.applySnapshot(calculator.getOriginalCalendarView(), calculator.getCalendarView());
         });
     }
 
-    private void resolveThreadHandler() {
-        new Thread(() -> {
-            long start = System.currentTimeMillis();
-            while (!calculator.calculate()) {
-                if (System.currentTimeMillis() - start > 30_000) {
-                    System.out.println("Timeout reached");
-                    return;
-                }
-
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
-                }
+    private void makeCalendarViewReadOnly(CalendarView calendarView) {
+        calendarView.setShowSearchField(false);
+        calendarView.setShowToolBar(false);
+        calendarView.setShowAddCalendarButton(false);
+        calendarView.setShowPrintButton(false);
+        calendarView.setEntryDetailsPopOverContentCallback(param -> null);
+//        calendarView.setEntryFactory(param -> null);
+//        calendarView.setEntryEditPolicy(entry -> false);
+        calendarView.addEventFilter(MouseEvent.DRAG_DETECTED, Event::consume);
+        calendarView.addEventFilter(MouseEvent.MOUSE_DRAGGED, Event::consume);
+        calendarView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (event.isPrimaryButtonDown()) {
+                event.consume();
             }
-        }).start();
+        });
     }
+
+    private void resolveHandler() { calculator.calculate(); }
 
     private void defineRule(ComboBox<ConflictRule.FieldType> fieldBox,
                             ComboBox<ConflictRule.Operator> operatorBox,
@@ -305,4 +328,40 @@ public class ConflictRuleProvider implements FormProvider {
         return copy;
     }
 
+    public class ConflictTable extends TableView<ConflictTable.Row> {
+        HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
+        public void refreshData(Map<String, ConflictRule> conflicts) {
+            getItems().clear();
+            conflicts.forEach((entry, rule) ->
+                    getItems().add(new Row(getEntryDescription(entryMap.get(entry)), rule.getFullName()))
+            );
+        }
+
+        public record Row(String entry, String rule) {
+        }
+
+        public ConflictTable(Map<String, ConflictRule> conflicts) {
+
+            TableColumn<Row, String> entryCol = new TableColumn<>("Entry");
+            entryCol.setCellValueFactory(c ->
+                    new SimpleStringProperty(c.getValue().entry()));
+
+            TableColumn<Row, String> ruleCol = new TableColumn<>("Rule");
+            ruleCol.setCellValueFactory(c ->
+                    new SimpleStringProperty(c.getValue().rule()));
+
+            getColumns().addAll(entryCol, ruleCol);
+
+            conflicts.forEach((entry, rule) -> {
+                getItems().add(new Row(getEntryDescription( entryMap.get(entry) ), rule.getFullName()));
+            });
+
+            setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY);
+            setPrefHeight(200);
+        }
+
+        private String getEntryDescription(Entry<?> entry) {
+            return entry.getTitle() + " " + entry.getStartDate() + " " + entry.getStartTime() + " " + entry.getEndDate() + " " + entry.getEndTime();
+        }
+    }
 }

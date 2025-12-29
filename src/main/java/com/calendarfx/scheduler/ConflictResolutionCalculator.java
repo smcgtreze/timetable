@@ -1,20 +1,26 @@
 package com.calendarfx.scheduler;
 
 import com.calendarfx.model.Calendar;
+import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
+import com.calendarfx.view.CalendarView;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableMap;
 
-import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 public class ConflictResolutionCalculator {
-    Map<Entry<?>, ConflictRule> currentConflicts = new HashMap<>();
+    private final ObservableMap<String, ConflictRule> currentConflicts =
+            FXCollections.observableHashMap();
+    private final HashMap<String, Entry<?>> entriesMap = new HashMap<>();
     private final List<PersonalProfile> personForms;
     private final List<ConflictRule> ruleForms;
+    private CalendarView calendarView;
+    private CalendarView originalCalendarView;
 
     public class ConflictResult{
         boolean successful;
@@ -25,6 +31,72 @@ public class ConflictResolutionCalculator {
     public ConflictResolutionCalculator(final List<ConflictRule> ruleForms, final List<PersonalProfile> personForms){
         this.personForms = personForms;
         this.ruleForms = ruleForms;
+    }
+
+    public ObservableMap<String, ConflictRule> getCurrentConflicts() {
+        return currentConflicts;
+    }
+
+    public HashMap<String, Entry<?>> getEntriesMap() {
+        return entriesMap;
+    }
+
+    public CalendarView getCalendarView() {
+        return calendarView;
+    }
+
+    public CalendarView getOriginalCalendarView() {
+        return originalCalendarView;
+    }
+
+    public void setCalendarView(final CalendarView calendarView) {
+        this.originalCalendarView = calendarView;
+        CalendarView snapshot = new CalendarView();
+
+        List<CalendarSource> deepCopy =
+                deepCopySources(calendarView.getCalendarSources());
+
+        snapshot.getCalendarSources().setAll(deepCopy);
+
+        this.calendarView = snapshot;
+    }
+
+    public List<CalendarSource> deepCopySources(List<CalendarSource> sources) {
+        GreatCalendarSerializer serializer = new GreatCalendarSerializer();
+
+        return sources.stream()
+                .map(source -> {
+                    CalendarSource newSource = new CalendarSource(source.getName());
+                    for (Calendar cal : source.getCalendars()) {
+                        GreatCalendar dto = serializer.fromCalendar(cal);
+                        Calendar newCal = serializer.toCalendar(dto);
+                        newSource.getCalendars().add(newCal);
+                    }
+                    return newSource;
+                })
+                .toList();
+    }
+
+    public void applySnapshot(CalendarView original, CalendarView snapshot) {
+        GreatCalendarSerializer serializer = new GreatCalendarSerializer();
+
+        // Build new CalendarSources from snapshot
+        List<CalendarSource> newSources = snapshot.getCalendarSources().stream()
+                .map(source -> {
+                    CalendarSource newSource = new CalendarSource(source.getName());
+
+                    for (Calendar cal : source.getCalendars()) {
+                        GreatCalendar dto = serializer.fromCalendar(cal);
+                        Calendar newCal = serializer.toCalendar(dto);
+                        newSource.getCalendars().add(newCal);
+                    }
+
+                    return newSource;
+                })
+                .toList();
+
+        // Replace the original sources
+        original.getCalendarSources().setAll(newSources);
     }
 
     public boolean hasConflict(Entry<?> entry) {
@@ -71,7 +143,9 @@ public class ConflictResolutionCalculator {
 
             if (ruleConflict) {
                 existsConflict = true;
-                currentConflicts.put(entry, rule);
+                Optional<Entry<?>> optEntry = findEntryById(calendarView, entry.getId());
+                optEntry.ifPresent(snapshotEntry -> entriesMap.put(entry.getId(), snapshotEntry));
+                currentConflicts.put(entry.getId(), rule);
             }
         }
         return existsConflict;
@@ -87,15 +161,15 @@ public class ConflictResolutionCalculator {
         };
     }
 
-
     public boolean calculate() {
 
         List<ConflictResult> conflictResults = new ArrayList<>();
         List<Entry<?>> resolvedEntries = new ArrayList<>();
 
         // Iterate safely (no mutation inside forEach)
-        for (var entry : currentConflicts.keySet()) {
-            ConflictRule rule = currentConflicts.get(entry);
+        for (var entryId : currentConflicts.keySet()) {
+            ConflictRule rule = currentConflicts.get(entryId);
+            Entry<?> entry =  entriesMap.get(entryId);
 
             boolean solved = switch (rule.getField()) {
                 case WORKING_HOURS -> solveWorkingHours(entry, rule);
@@ -114,16 +188,16 @@ public class ConflictResolutionCalculator {
         }
 
         // Remove resolved entries AFTER iteration
-        resolvedEntries.forEach(currentConflicts::remove);
+        resolvedEntries.forEach( entry -> {
+            currentConflicts.remove(entry.getId());
+            entriesMap.remove(entry.getId());
+        });
 
         return currentConflicts.isEmpty();
     }
 
     private boolean solveWorkingHours(Entry<?> entry, ConflictRule rule) {
-        Calendar calendar = entry.getCalendar();
-        if (calendar == null) return false;
-
-        List<Entry<?>> calendarEntries = calendar.findEntries("");
+        List<Entry<?>> calendarEntries = List.of(entry);
         return switch (rule.getOperator()) {
             case LESSER -> solveWorkingHoursLesser(calendarEntries);
             case GREATER -> solveWorkingHoursGreater(calendarEntries);
@@ -135,7 +209,7 @@ public class ConflictResolutionCalculator {
         List<Entry<?>> removable = entries.stream()
                 .filter(e -> e.getDuration().toHours() <= 1
                 || e.getDuration().toHours() > 4
-                || e.getEndTime().isAfter(LocalTime.of(17, 0))
+                || e.getEndTime().isAfter(LocalTime.of(18, 0))
                 || e.getStartTime().isBefore(LocalTime.of(9, 0)))
                 .toList();
 
@@ -167,7 +241,13 @@ public class ConflictResolutionCalculator {
         return false;
     }
 
-
-
+    public static Optional<Entry<?>> findEntryById(CalendarView view, String id) {
+        if(view == null) return Optional.empty();
+        return view.getCalendarSources().stream()
+                .flatMap(src -> src.getCalendars().stream())
+                .flatMap(cal -> cal.findEntries("").stream())
+                .filter(e ->((Entry<?>)e).getId().equals(id))
+                .findFirst();
+    }
 
 }
