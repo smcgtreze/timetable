@@ -79,9 +79,11 @@ public class CalendarApp extends Application {
         EventHandler<ActionEvent> addPersonHandler = e -> {
             Form form = formProvider.createForm();
             formProvider.showFormWindow(primaryStage, form, () -> {
-
-                String name = cachePersonForm(form);
-                Calendar calendar = createCalendar(name, List.of());
+                PersonalProfileMapper profileMapper = new PersonalProfileMapper();
+                PersonalProfile profile = profileMapper.fromForm(form);
+                // Cache personal Profile
+                personForms.add(profile);
+                Calendar calendar = createCalendar(profile.getName(), List.of());
                 familyCalendarSource.getCalendars().add(calendar);
 
                 GreatCalendar gc = persistenceManager.calendarSerializer.fromCalendar(calendar);
@@ -115,33 +117,6 @@ public class CalendarApp extends Application {
         setupPrimaryStage(primaryStage, calendarView, addPersonHandler, addConflictRuleHandler);
     }
 
-    private String cachePersonForm(Form form) {
-        List<? extends DataField<?, ?, ?>> dataFields = getDataFields(form);
-
-        // Extract the data fields from the form
-        String name = getField( dataFields,"Name");
-        int workingHours = 0;
-        String email = getField( dataFields,"Email");
-        String job = getField( dataFields,"Job");
-        String age = getField( dataFields,"Age");
-        String preferredShift = getField( dataFields,"Preferred Shift");
-
-        PersonalProfile profile = new PersonalProfile(workingHours, email, job, Integer.parseInt(age), name, preferredShift );
-
-        // Store under that calendar name
-        personForms.add(profile);
-        return name;
-    }
-
-    private String getField(List<? extends DataField<?, ?, ?>> dataFields, String fieldName) {
-        return dataFields.stream()
-                .filter(df -> fieldName.equals(df.getLabel()))
-                .map(DataField::getValue)
-                .map(Object::toString)
-                .findFirst()
-                .orElse("Unknown");
-    }
-
     private void refreshConflictsInView() {
         // Optimize this very well !!
         if(calendarView.getCalendars().isEmpty())
@@ -167,17 +142,6 @@ public class CalendarApp extends Application {
                     .filter(p -> p.getName().equals(calendar.getName())).findFirst();
             personalProfile.ifPresent(p -> p.setWorkingHours(totalHoursInCalendar));
         });
-    }
-
-    private static List<? extends DataField<?, ?, ?>> getDataFields(Form form) {
-        List<? extends DataField<?, ?, ?>> dataFields = form.getFields().stream()
-                .map(f -> switch (f) {
-                    case DataField<?, ?, ?> dataField -> dataField;
-                    default -> null;
-                })
-                .filter(Objects::nonNull)
-                .toList();
-        return dataFields;
     }
 
     private void setupPrimaryStage(Stage primaryStage, final CalendarView calendarView, EventHandler<ActionEvent> personHandler, EventHandler<ActionEvent> conflictHandler) {
