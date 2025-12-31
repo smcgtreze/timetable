@@ -30,6 +30,22 @@ public class PersonalProfileMapper implements FormMapper<PersonalProfile> {
         );
     }
 
+    public void fromForm(Form form, PersonalProfile personalProfile) {
+        List<? extends DataField<?, ?, ?>> dataFields = getDataFields(form);
+
+        int workingHours = 0;
+        String email = getField(dataFields, "Email");
+        String job = getField(dataFields, "Job");
+        String age = getField(dataFields, "Age");
+        String preferredShift = getField(dataFields, "Preferred Shift");
+
+        personalProfile.setEmail(email);
+        personalProfile.setJob(job);
+        personalProfile.setAge(Integer.parseInt(age));
+        personalProfile.setPreferredShift(preferredShift);
+        personalProfile.setWorkingHours(workingHours);
+    }
+
     public void toForm(Form form, PersonalProfile profile) {
             getDataFields(form).forEach(field -> {
             switch (field.getLabel()) {
@@ -41,7 +57,6 @@ public class PersonalProfileMapper implements FormMapper<PersonalProfile> {
             }
         });
     }
-
 
     private List<? extends DataField<?, ?, ?>> getDataFields(Form form) {
         return form.getFields().stream()

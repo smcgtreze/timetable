@@ -16,12 +16,16 @@ import javafx.animation.RotateTransition;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -35,6 +39,7 @@ public class CalendarApp extends Application {
     public static final String GREAT_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_2 = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String GREAT_BUTTON_STYLE_3 = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
+    public static final String GREAT_BUTTON_STYLE_4 = "-fx-background-color: blue; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String WARNING_STYLE = "-fx-background-color: rgba(255,0,0,0.3); -fx-border-color: red;";
     public static final int PREFERRED_BUTTON_SIZE = 50;
     private static final int ENTRY_CLICK_COUNT = 2;
@@ -45,6 +50,7 @@ public class CalendarApp extends Application {
     public static final String REFRESH_SIGN ="🗘";
     public static final String SHOCK_SIGN = "⚡";
     public static final String PLUS_SIGN = "+";
+    public static final String EDIT_SIGN = "✎";
     private static List<GreatCalendar> cachedCalendars;
     private static PersistenceManager persistenceManager;
     private static EventHandler<ActionEvent> cachedPersonHandler;
@@ -54,6 +60,7 @@ public class CalendarApp extends Application {
     private static List<ConflictRule> ruleForms;
     private static EventHandler<ActionEvent> cachedConflictHandler;
     private static CalendarView calendarView;
+    private EmployeeFormProvider formProvider;
 
     @Override
     public void start(Stage primaryStage) {
@@ -72,8 +79,7 @@ public class CalendarApp extends Application {
             });
         }
 
-        EmployeeFormProvider formProvider =
-                new EmployeeFormProvider(preferredShift, WIDTH, HEIGHT, BUTTON_SPACING);
+        formProvider = new EmployeeFormProvider(preferredShift, WIDTH, HEIGHT, BUTTON_SPACING);
 
         // PERSON CALENDAR HANDLING
         EventHandler<ActionEvent> addPersonHandler = e -> {
@@ -144,23 +150,64 @@ public class CalendarApp extends Application {
         });
     }
 
+    private void openProfileSelectionWindow(EmployeeFormProvider formProvider) {
+        Stage stage = new Stage();
+        stage.setTitle("Select Profile to Edit");
+
+        ListView<PersonalProfile> listView = new ListView<>();
+        listView.getItems().addAll(personForms);
+
+        listView.setCellFactory(param -> new ListCell<>() {
+            @Override
+            protected void updateItem(PersonalProfile item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? "" : item.getName());
+            }
+        });
+
+        Button editButton = new Button("Edit");
+        Button closeButton = new Button("Close");
+
+        editButton.setOnAction(e -> {
+            PersonalProfile selected = listView.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                formProvider.editEmployee(selected, () -> {
+                    refreshConflictsInView();
+                });
+            }
+        });
+
+        closeButton.setOnAction(e -> stage.close());
+
+        HBox buttons = new HBox(10, editButton, closeButton);
+        buttons.setAlignment(Pos.CENTER);
+
+        VBox layout = new VBox(10, listView, buttons);
+        layout.setPadding(new Insets(10));
+
+        stage.setScene(new Scene(layout, 300, 400));
+        stage.show();
+    }
+
     private void setupPrimaryStage(Stage primaryStage, final CalendarView calendarView, EventHandler<ActionEvent> personHandler, EventHandler<ActionEvent> conflictHandler) {
         refreshConflictsInView();
 
         // regain handlers from cache if required
         personHandler = ( personHandler == null ) ? cachedPersonHandler : personHandler;
         conflictHandler = ( conflictHandler == null ) ? cachedConflictHandler : conflictHandler;
-        EventHandler<ActionEvent> refreshHandler = e -> { refreshConflictsInView();};
+        EventHandler<ActionEvent> refreshHandler = e -> refreshConflictsInView();
+        EventHandler<ActionEvent> editPersonHandler = e -> openProfileSelectionWindow(formProvider);
 
         Button addButton = createButton(personHandler, PLUS_SIGN,"Add a new personal calendar", GREAT_BUTTON_STYLE, false);
         Button conflictsButton = createButton(conflictHandler, SHOCK_SIGN,"Add/Modify a calendar rule", GREAT_BUTTON_STYLE_2, false);
         Button refreshButton = createButton(refreshHandler, REFRESH_SIGN,"Refresh calendar conflicts", GREAT_BUTTON_STYLE_3, true);
+        Button editProfileButton = createButton(editPersonHandler, EDIT_SIGN, "Edit an existing profile", GREAT_BUTTON_STYLE_4, false);
 
         BorderPane root = new BorderPane();
         root.setCenter(calendarView);
 
         HBox appButtons = new HBox(BUTTON_SPACING);
-        appButtons.getChildren().addAll(addButton,conflictsButton, refreshButton);
+        appButtons.getChildren().addAll(addButton, editProfileButton, conflictsButton, refreshButton);
         appButtons.setAlignment(Pos.TOP_CENTER);
         root.setTop(appButtons);
 
