@@ -126,7 +126,7 @@ public class ConflictRuleProvider implements FormProvider {
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(this.buttonSpacing));
 
-        CalendarView calendarView = calculator.getCalendarView();
+        CalendarView calendarView = calculator.getSnapshotCalendarView();
         VBox.setVgrow(calendarView, Priority.ALWAYS);
         layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons, conflictTable, calendarView);
 
@@ -155,7 +155,7 @@ public class ConflictRuleProvider implements FormProvider {
         });
 
         applyButton.setOnAction(evt -> {
-            calculator.applySnapshot(calculator.getOriginalCalendarView(), calculator.getCalendarView());
+            calculator.applySnapshot(calculator.getOriginalCalendarView(), calculator.getSnapshotCalendarView());
         });
     }
 
