@@ -19,16 +19,23 @@ public class ConflictResolutionCalculator {
     private final HashMap<String, Entry<?>> entriesMap = new HashMap<>();
     private final List<PersonalProfile> personForms;
     private final List<ConflictRule> ruleForms;
-    private CalendarView calendarView;
+
+    // snapshotCalendarView holds the deep-copied snapshot,
+    // originalCalendarView holds the original view passed in.
+    private CalendarView snapshotCalendarView;
     private CalendarView originalCalendarView;
 
-    public class ConflictResult{
-        boolean successful;
-        Entry entry;
-        public ConflictResult(Entry entry, boolean successful){}
+    public static class ConflictResult {
+        public final boolean successful;
+        public final Entry<?> entry;
+
+        public ConflictResult(Entry<?> entry, boolean successful) {
+            this.entry = entry;
+            this.successful = successful;
+        }
     }
 
-    public ConflictResolutionCalculator(final List<ConflictRule> ruleForms, final List<PersonalProfile> personForms){
+    public ConflictResolutionCalculator(final List<ConflictRule> ruleForms, final List<PersonalProfile> personForms) {
         this.personForms = personForms;
         this.ruleForms = ruleForms;
     }
@@ -41,24 +48,28 @@ public class ConflictResolutionCalculator {
         return entriesMap;
     }
 
-    public CalendarView getCalendarView() {
-        return calendarView;
+    public CalendarView getSnapshotCalendarView() {
+        return snapshotCalendarView;
     }
 
     public CalendarView getOriginalCalendarView() {
         return originalCalendarView;
     }
 
-    public void setCalendarView(final CalendarView calendarView) {
-        this.originalCalendarView = calendarView;
+    /**
+     * Stores the original view and creates a deep snapshot copy which will be used for
+     * conflict detection/resolution operations.
+     */
+    public void setCalendarView(final CalendarView originalView) {
+        this.originalCalendarView = originalView;
         CalendarView snapshot = new CalendarView();
 
         List<CalendarSource> deepCopy =
-                deepCopySources(calendarView.getCalendarSources());
+                deepCopySources(originalView.getCalendarSources());
 
         snapshot.getCalendarSources().setAll(deepCopy);
 
-        this.calendarView = snapshot;
+        this.snapshotCalendarView = snapshot;
     }
 
     public List<CalendarSource> deepCopySources(List<CalendarSource> sources) {
@@ -118,32 +129,33 @@ public class ConflictResolutionCalculator {
                 case NAME -> ruleConflict = calendarName.equals(rule.getValue());
                 case WORKING_HOURS -> {
                     if (personalProfile != null) {
-                        ruleConflict = evaluate( rule.getValue(),operator,String.valueOf(personalProfile.getWorkingHours()));
+                        ruleConflict = evaluate(rule.getValue(), operator, String.valueOf(personalProfile.getWorkingHours()));
                     }
                 }
                 case PREFERRED_SHIFT -> {
                     if (personalProfile != null) {
                         Object preferredShift = personalProfile.getPreferredShift();
-                        ruleConflict = preferredShift != null && evaluate( rule.getValue(),operator, preferredShift.toString());
+                        ruleConflict = preferredShift != null && evaluate(rule.getValue(), operator, preferredShift.toString());
                     }
                 }
                 case JOB -> {
                     if (personalProfile != null) {
                         Object job = personalProfile.getJob();
-                        ruleConflict = job != null && evaluate( rule.getValue(),operator, job.toString());
+                        ruleConflict = job != null && evaluate(rule.getValue(), operator, job.toString());
                     }
                 }
                 case EMAIL -> {
                     if (personalProfile != null) {
                         Object email = personalProfile.getEmail();
-                        ruleConflict = email != null && evaluate( rule.getValue(),operator, email.toString());
+                        ruleConflict = email != null && evaluate(rule.getValue(), operator, email.toString());
                     }
                 }
             }
 
             if (ruleConflict) {
                 existsConflict = true;
-                Optional<Entry<?>> optEntry = findEntryById(calendarView, entry.getId());
+                // look up the entry in the snapshot (not the original) to preserve snapshot state
+                Optional<Entry<?>> optEntry = findEntryById(snapshotCalendarView, entry.getId());
                 optEntry.ifPresent(snapshotEntry -> entriesMap.put(entry.getId(), snapshotEntry));
                 currentConflicts.put(entry.getId(), rule);
             }
@@ -152,13 +164,27 @@ public class ConflictResolutionCalculator {
     }
 
     private boolean evaluate(String left, ConflictRule.Operator operator, String right) {
-        return switch (operator) {
-            case ConflictRule.Operator.EQUALS -> left.equals(right);
-            case ConflictRule.Operator.NOT_EQUALS -> !left.equals(right);
-            case ConflictRule.Operator.GREATER  -> Double.parseDouble(left) >  Double.parseDouble(right);
-            case ConflictRule.Operator.LESSER  -> Double.parseDouble(left) <  Double.parseDouble(right);
-            default -> false;
-        };
+        // Guard parsing operations to avoid NumberFormatException propagating
+        try {
+            return switch (operator) {
+                case EQUALS -> left.equals(right);
+                case NOT_EQUALS -> !left.equals(right);
+                case GREATER -> {
+                    double l = Double.parseDouble(left);
+                    double r = Double.parseDouble(right);
+                    yield l > r;
+                }
+                case LESSER -> {
+                    double l = Double.parseDouble(left);
+                    double r = Double.parseDouble(right);
+                    yield l < r;
+                }
+                default -> false;
+            };
+        } catch (NumberFormatException ex) {
+            // Invalid numeric input for GREATER/LESSER comparisons; treat as non-matching
+            return false;
+        }
     }
 
     public boolean calculate() {
@@ -166,10 +192,10 @@ public class ConflictResolutionCalculator {
         List<ConflictResult> conflictResults = new ArrayList<>();
         List<Entry<?>> resolvedEntries = new ArrayList<>();
 
-        // Iterate safely (no mutation inside forEach)
-        for (var entryId : currentConflicts.keySet()) {
+        // Iterate safely over a snapshot of the key set to avoid concurrent-modification surprises
+        for (String entryId : new ArrayList<>(currentConflicts.keySet())) {
             ConflictRule rule = currentConflicts.get(entryId);
-            Entry<?> entry =  entriesMap.get(entryId);
+            Entry<?> entry = entriesMap.get(entryId);
 
             boolean solved = switch (rule.getField()) {
                 case WORKING_HOURS -> solveWorkingHours(entry, rule);
@@ -188,7 +214,7 @@ public class ConflictResolutionCalculator {
         }
 
         // Remove resolved entries AFTER iteration
-        resolvedEntries.forEach( entry -> {
+        resolvedEntries.forEach(entry -> {
             currentConflicts.remove(entry.getId());
             entriesMap.remove(entry.getId());
         });
@@ -208,9 +234,9 @@ public class ConflictResolutionCalculator {
     private boolean solveWorkingHoursLesser(List<Entry<?>> entries) {
         List<Entry<?>> removable = entries.stream()
                 .filter(e -> e.getDuration().toHours() <= 1
-                || e.getDuration().toHours() > 4
-                || e.getEndTime().isAfter(LocalTime.of(18, 0))
-                || e.getStartTime().isBefore(LocalTime.of(9, 0)))
+                        || e.getDuration().toHours() > 4
+                        || e.getEndTime().isAfter(LocalTime.of(18, 0))
+                        || e.getStartTime().isBefore(LocalTime.of(9, 0)))
                 .toList();
 
         removable.forEach(e -> {
@@ -224,8 +250,8 @@ public class ConflictResolutionCalculator {
     private boolean solveWorkingHoursGreater(List<Entry<?>> entries) {
         List<Entry<?>> addable = entries.stream()
                 .filter(e -> e.getDuration().toHours() <= 1 ||
-                e.getEndTime().isBefore(LocalTime.of(16, 0)) ||
-                e.getStartTime().isAfter(LocalTime.of(9, 0)))
+                        e.getEndTime().isBefore(LocalTime.of(16, 0)) ||
+                        e.getStartTime().isAfter(LocalTime.of(9, 0)))
                 .toList();
 
         addable.forEach(e -> {
@@ -242,12 +268,11 @@ public class ConflictResolutionCalculator {
     }
 
     public static Optional<Entry<?>> findEntryById(CalendarView view, String id) {
-        if(view == null) return Optional.empty();
+        if (view == null) return Optional.empty();
         return view.getCalendarSources().stream()
                 .flatMap(src -> src.getCalendars().stream())
                 .flatMap(cal -> cal.findEntries("").stream())
-                .filter(e ->((Entry<?>)e).getId().equals(id))
+                .filter(e -> ((Entry<?>) e).getId().equals(id))
                 .findFirst();
     }
-
 }
