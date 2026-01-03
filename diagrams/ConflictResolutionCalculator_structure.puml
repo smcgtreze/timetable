@@ -1,0 +1,323 @@
+@startuml
+
+/' diagram meta data start
+config=StructureConfiguration;
+{
+  "projectClassification": {
+    "searchMode": "OpenProject", // OpenProject, AllProjects
+    "includedProjects": "",
+    "pathEndKeywords": "*.impl",
+    "isClientPath": "",
+    "isClientName": "",
+    "isTestPath": "",
+    "isTestName": "",
+    "isMappingPath": "",
+    "isMappingName": "",
+    "isDataAccessPath": "",
+    "isDataAccessName": "",
+    "isDataStructurePath": "",
+    "isDataStructureName": "",
+    "isInterfaceStructuresPath": "",
+    "isInterfaceStructuresName": "",
+    "isEntryPointPath": "",
+    "isEntryPointName": "",
+    "treatFinalFieldsAsMandatory": false
+  },
+  "graphRestriction": {
+    "classPackageExcludeFilter": "",
+    "classPackageIncludeFilter": "",
+    "classNameExcludeFilter": "",
+    "classNameIncludeFilter": "",
+    "methodNameExcludeFilter": "",
+    "methodNameIncludeFilter": "",
+    "removeByInheritance": "", // inheritance/annotation based filtering is done in a second step
+    "removeByAnnotation": "",
+    "removeByClassPackage": "", // cleanup the graph after inheritance/annotation based filtering is done
+    "removeByClassName": "",
+    "cutMappings": false,
+    "cutEnum": true,
+    "cutTests": true,
+    "cutClient": true,
+    "cutDataAccess": false,
+    "cutInterfaceStructures": false,
+    "cutDataStructures": false,
+    "cutGetterAndSetter": true,
+    "cutConstructors": false
+  },
+  "graphTraversal": {
+    "forwardDepth": 3,
+    "backwardDepth": 3,
+    "classPackageExcludeFilter": "",
+    "classPackageIncludeFilter": "",
+    "classNameExcludeFilter": "",
+    "classNameIncludeFilter": "",
+    "methodNameExcludeFilter": "",
+    "methodNameIncludeFilter": "",
+    "hideMappings": false,
+    "hideDataStructures": false,
+    "hidePrivateMethods": true,
+    "hideInterfaceCalls": true, // indirection: implementation -> interface (is hidden) -> implementation
+    "onlyShowApplicationEntryPoints": false, // root node is included
+    "useMethodCallsForStructureDiagram": "ForwardOnly" // ForwardOnly, BothDirections, No
+  },
+  "details": {
+    "aggregation": "GroupByClass", // ByClass, GroupByClass, None
+    "showClassGenericTypes": true,
+    "showMethods": true,
+    "showMethodParameterNames": true,
+    "showMethodParameterTypes": true,
+    "showMethodReturnType": true,
+    "showPackageLevels": 2,
+    "showDetailedClassStructure": true
+  },
+  "rootClass": "com.calendarfx.scheduler.ConflictResolutionCalculator",
+  "extensionCallbackMethod": "calendar" // qualified.class.name#methodName - signature: public static String method(String)
+}
+diagram meta data end '/
+
+
+
+digraph g {
+    rankdir="TB"
+    splines=polyline
+    
+
+'nodes 
+subgraph cluster_428683408 { 
+   	label=calendarfx
+	labeljust=l
+	fillcolor="#ececec"
+	style=filled
+   
+   subgraph cluster_887893795 { 
+   	label=scheduler
+	labeljust=l
+	fillcolor="#d8d8d8"
+	style=filled
+   
+   CalendarApp174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)CalendarApp</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >-   formProvider: EmployeeFormProvider [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   preferredShift: List&lt;String&gt; [0..*]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >- createButton(handler: EventHandler&lt;ActionEvent&gt;, title: String, tooltip: String, style: String, hasAnimation: boolean): Button</TD></TR>
+<TR><TD ALIGN="LEFT" >- createCalendar(name: String, entries: List&lt;GreatEntry&gt;): Calendar</TD></TR>
+<TR><TD ALIGN="LEFT" >- loadInformation()</TD></TR>
+<TR><TD ALIGN="LEFT" >+ main(args: String[])</TD></TR>
+<TR><TD ALIGN="LEFT" >- openProfileSelectionWindow(formProvider: EmployeeFormProvider)</TD></TR>
+<TR><TD ALIGN="LEFT" >- refreshConflictsInView()</TD></TR>
+<TR><TD ALIGN="LEFT" >- saveInformation()</TD></TR>
+<TR><TD ALIGN="LEFT" >- setupCalendarView(): CalendarView</TD></TR>
+<TR><TD ALIGN="LEFT" >+ start(primaryStage: Stage)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+ConflictResolutionCalculator174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)ConflictResolutionCalculator</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >-   calendarView: CalendarView [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   currentConflicts: ObservableMap&lt;String, ConflictRule&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   entriesMap: HashMap&lt;String, Entry&lt;?&gt;&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   originalCalendarView: CalendarView [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   personForms: List&lt;PersonalProfile&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   ruleForms: List&lt;ConflictRule&gt; [0..*]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ ConflictResolutionCalculator(ruleForms: List&lt;ConflictRule&gt;, personForms: List&lt;PersonalProfile&gt;)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ applySnapshot(original: CalendarView, snapshot: CalendarView)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ calculate(): boolean</TD></TR>
+<TR><TD ALIGN="LEFT" >+ deepCopySources(sources: List&lt;CalendarSource&gt;): List&lt;CalendarSource&gt;</TD></TR>
+<TR><TD ALIGN="LEFT" >- evaluate(left: String, operator: Operator, right: String): boolean</TD></TR>
+<TR><TD ALIGN="LEFT" >+ findEntryById(view: CalendarView, id: String): Optional&lt;Entry&lt;?&gt;&gt;</TD></TR>
+<TR><TD ALIGN="LEFT" >+ hasConflict(entry: Entry&lt;?&gt;): boolean</TD></TR>
+<TR><TD ALIGN="LEFT" >- solvePreferredShift(entry: Entry&lt;?&gt;, rule: ConflictRule): boolean</TD></TR>
+<TR><TD ALIGN="LEFT" >- solveWorkingHours(entry: Entry&lt;?&gt;, rule: ConflictRule): boolean</TD></TR>
+<TR><TD ALIGN="LEFT" >- solveWorkingHoursGreater(entries: List&lt;Entry&lt;?&gt;&gt;): boolean</TD></TR>
+<TR><TD ALIGN="LEFT" >- solveWorkingHoursLesser(entries: List&lt;Entry&lt;?&gt;&gt;): boolean</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+ConflictResult621719588[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)ConflictResult</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >#   entry: Entry [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >#   successful: boolean [1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ ConflictResult(entry: Entry, successful: boolean)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+ConflictRule174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)ConflictRule</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >-   active: boolean [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   field: FieldType [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   operator: Operator [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   value: String [0..1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ ConflictRule(field: FieldType, operator: Operator, value: String, active: boolean)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+ConflictRuleProvider174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)ConflictRuleProvider</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >-   buttonSpacing: int [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   calculator: ConflictResolutionCalculator [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   height: int [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   preferredShift: List&lt;String&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   ruleList: VBox [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   rules: List&lt;ConflictRule&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   width: int [1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ ConflictRuleProvider(preferredShift: List&lt;String&gt;, width: int, height: int, buttonSpacing: int)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ createForm(): Form</TD></TR>
+<TR><TD ALIGN="LEFT" >- createRuleForm(rule: ConflictRule): Form</TD></TR>
+<TR><TD ALIGN="LEFT" >- createSupportButtons(ruleList: VBox, rule: ConflictRule)</TD></TR>
+<TR><TD ALIGN="LEFT" >- defineRule(fieldBox: ComboBox&lt;FieldType&gt;, operatorBox: ComboBox&lt;Operator&gt;, valueField: TextField, activeBox: CheckBox, ruleList: VBox, skipClear: boolean)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ deleteRule(rule: ConflictRule)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ duplicateRule(rule: ConflictRule): ConflictRule</TD></TR>
+<TR><TD ALIGN="LEFT" >- editRule(rule: ConflictRule, ruleLabel: Label)</TD></TR>
+<TR><TD ALIGN="LEFT" >- formatRule(rule: ConflictRule): String</TD></TR>
+<TR><TD ALIGN="LEFT" >- makeCalendarViewReadOnly(calendarView: CalendarView)</TD></TR>
+<TR><TD ALIGN="LEFT" >- resolveHandler()</TD></TR>
+<TR><TD ALIGN="LEFT" >+ showFormWindow(stage: Stage, form: Form, onSave: Runnable)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+EmployeeFormProvider174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)EmployeeFormProvider</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >-   buttonSpacing: int [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   height: int [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   mapper: PersonalProfileMapper [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   preferredShift: List&lt;String&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   width: int [1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ EmployeeFormProvider(preferredShift: List&lt;String&gt;, width: int, height: int, buttonSpacing: int)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ createForm(): Form</TD></TR>
+<TR><TD ALIGN="LEFT" >+ createForm(profile: PersonalProfile): Form</TD></TR>
+<TR><TD ALIGN="LEFT" ># editEmployee(employee: PersonalProfile, onSave: Runnable)</TD></TR>
+<TR><TD ALIGN="LEFT" >+ showFormWindow(stage: Stage, form: Form, onSave: Runnable)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+GreatCalendar174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)GreatCalendar</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >#   entries: List&lt;GreatEntry&gt; [0..*]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   name: String [0..1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ GreatCalendar(name: String, entries: List&lt;GreatEntry&gt;)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+GreatCalendarSerializer174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)GreatCalendarSerializer</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ fromCalendar(calendar: Calendar): GreatCalendar</TD></TR>
+<TR><TD ALIGN="LEFT" >+ fromEntry(entry: Entry&lt;?&gt;): GreatEntry</TD></TR>
+<TR><TD ALIGN="LEFT" >+ toCalendar(gc: GreatCalendar): Calendar</TD></TR>
+<TR><TD ALIGN="LEFT" >+ toEntry(ge: GreatEntry): Entry&lt;?&gt;</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+GreatEntry146669831[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)GreatEntry</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >#   end: LocalDateTime [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >#   fullDay: boolean [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >#   id: String [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >#   location: String [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >#   start: LocalDateTime [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >#   title: String [0..1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ GreatEntry()</TD></TR>
+<TR><TD ALIGN="LEFT" >+ GreatEntry(id: String, title: String, start: LocalDateTime, end: LocalDateTime, fullDay: boolean, location: String)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+
+PersonalProfile174319830[
+	label=<<TABLE BORDER="1" CELLBORDER="0" CELLPADDING="4" CELLSPACING="0">
+<TR><TD ALIGN="LEFT" >(C)PersonalProfile</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >-   age: int [1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   email: String [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   job: String [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   name: String [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   preferredShift: String [0..1]</TD></TR>
+<TR><TD ALIGN="LEFT" >-   workingHours: int [1]</TD></TR>
+<HR/>
+<TR><TD ALIGN="LEFT" >+ PersonalProfile(workingHours: int, email: String, job: String, age: int, name: String, preferredShift: String)</TD></TR>
+</TABLE>>
+	style=filled
+	margin=0
+	shape=plaintext
+	fillcolor="#FFFFFF"
+];
+} 
+} 
+
+'edges    
+CalendarApp174319830 -> EmployeeFormProvider174319830[label="formProvider
+[0..1]"];
+ConflictResolutionCalculator174319830 -> ConflictResult621719588[label="calculate() -> ConflictResult()"];
+ConflictResolutionCalculator174319830 -> ConflictRule174319830[label="currentConflicts
+[0..*]"];
+ConflictResolutionCalculator174319830 -> ConflictRule174319830[label="ruleForms
+[0..*]"];
+ConflictResolutionCalculator174319830 -> PersonalProfile174319830[label="personForms
+[0..*]"];
+ConflictRuleProvider174319830 -> ConflictResolutionCalculator174319830[label="calculator
+[0..1]"];
+ConflictRuleProvider174319830 -> EmployeeFormProvider174319830[arrowhead=none];
+GreatCalendarSerializer174319830 -> GreatCalendar174319830[label="fromCalendar() -> GreatCalendar()"];
+GreatCalendarSerializer174319830 -> GreatEntry146669831[label="fromEntry() -> GreatEntry()"];
+    
+}
+@enduml

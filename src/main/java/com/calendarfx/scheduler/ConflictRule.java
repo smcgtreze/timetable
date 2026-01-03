@@ -1,8 +1,18 @@
 package com.calendarfx.scheduler;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class ConflictRule {
 
-    public ConflictRule(FieldType field, Operator operator, String value, boolean active) {
+    public static final String SPACE = " ";
+
+    @JsonCreator
+    public ConflictRule(
+            @JsonProperty("field") FieldType field,
+            @JsonProperty("operator") Operator operator,
+            @JsonProperty("value") String value,
+            @JsonProperty("active") boolean active) {
         this.field = field;
         this.operator = operator;
         this.value = value;
@@ -10,7 +20,7 @@ public class ConflictRule {
     }
 
     public enum FieldType {
-        NAME, WORKING_HOURS, PREFERRED_SHIFT, JOB
+        NAME, WORKING_HOURS, PREFERRED_SHIFT, JOB, EMAIL
     }
 
     public enum Operator {
@@ -33,4 +43,8 @@ public class ConflictRule {
 
     public String getValue() { return value; }
     public void setValue(String value) { this.value = value; }
+
+    public String getFullName(){
+        return field.toString() + " has to be" + SPACE + operator.toString() + SPACE + value;
+    }
 }
