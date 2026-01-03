@@ -4,7 +4,10 @@ import com.dlsc.formsfx.model.structure.Field;
 import com.dlsc.formsfx.model.structure.Form;
 import com.dlsc.formsfx.model.structure.Group;
 import com.dlsc.formsfx.model.structure.Section;
+import com.dlsc.formsfx.model.validators.IntegerRangeValidator;
+import com.dlsc.formsfx.model.validators.StringLengthValidator;
 import com.dlsc.formsfx.view.renderer.FormRenderer;
+import com.dlsc.formsfx.view.util.ColSpan;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -15,10 +18,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.List;
-
-import com.dlsc.formsfx.model.validators.IntegerRangeValidator;
-import com.dlsc.formsfx.model.validators.StringLengthValidator;
-import com.dlsc.formsfx.view.util.ColSpan;
 
 public class EmployeeFormProvider implements FormProvider {
 

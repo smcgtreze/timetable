@@ -9,7 +9,7 @@ import com.calendarfx.view.CalendarView.Page;
 import com.calendarfx.view.DayViewBase.EarlyLateHoursStrategy;
 import com.calendarfx.view.DetailedWeekView;
 import com.calendarfx.view.EntryViewBase;
-import com.dlsc.formsfx.model.structure.*;
+import com.dlsc.formsfx.model.structure.Form;
 import fr.brouillard.oss.cssfx.CSSFX;
 import javafx.animation.Interpolator;
 import javafx.animation.RotateTransition;
@@ -31,7 +31,10 @@ import javafx.util.Duration;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CalendarApp extends Application {
