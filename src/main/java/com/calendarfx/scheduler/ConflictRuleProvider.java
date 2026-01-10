@@ -2,10 +2,7 @@ package com.calendarfx.scheduler;
 
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.CalendarView;
-import com.dlsc.formsfx.model.structure.Field;
-import com.dlsc.formsfx.model.structure.Form;
-import com.dlsc.formsfx.model.structure.Group;
-import com.dlsc.formsfx.model.structure.SingleSelectionField;
+import com.dlsc.formsfx.model.structure.*;
 import com.dlsc.formsfx.view.renderer.FormRenderer;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -24,7 +21,7 @@ import javafx.stage.Stage;
 
 import java.util.*;
 
-public class ConflictRuleProvider implements FormProvider {
+public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
     public static final int HGAP = 10;
     public static final int VGAP = 5;
@@ -56,7 +53,6 @@ public class ConflictRuleProvider implements FormProvider {
     // ---------------------------------------------------------
     // 1. FORM CREATION
     // ---------------------------------------------------------
-
     @Override
     public Form createForm() {
         ruleList = new VBox(5);
@@ -126,9 +122,11 @@ public class ConflictRuleProvider implements FormProvider {
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(this.buttonSpacing));
 
+        Label status = new Label();
+
         CalendarView calendarView = calculator.getSnapshotCalendarView();
         VBox.setVgrow(calendarView, Priority.ALWAYS);
-        layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons, conflictTable, calendarView);
+        layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons, conflictTable, calendarView, status);
 
         Scene scene = new Scene(layout, width, height);
         makeCalendarViewReadOnly(calendarView);
@@ -144,18 +142,25 @@ public class ConflictRuleProvider implements FormProvider {
 
         defineRuleButton.setOnAction(e -> {
             defineRule(fieldBox, operatorBox, valueField, activeBox, ruleList, false);
+            status.setText("Rule defined successfully");
         });
 
         duplicateRuleButton.setOnAction(e -> {
             defineRule(fieldBox, operatorBox, valueField, activeBox, ruleList, true);
+            status.setText("Rule duplicated successfully");
         });
 
         resolveButton.setOnAction(e -> {
             resolveHandler();
+            status.setText("Resolved successfully");
         });
 
-        applyButton.setOnAction(evt -> {
-            calculator.applySnapshot(calculator.getOriginalCalendarView(), calculator.getSnapshotCalendarView());
+        applyButton.setOnAction(e -> {
+            calculator.applySnapshot(
+                    calculator.getOriginalCalendarView(),
+                    calculator.getSnapshotCalendarView()
+            );
+            status.setText("Snapshot applied");
         });
     }
 
@@ -165,8 +170,6 @@ public class ConflictRuleProvider implements FormProvider {
         calendarView.setShowAddCalendarButton(false);
         calendarView.setShowPrintButton(false);
         calendarView.setEntryDetailsPopOverContentCallback(param -> null);
-//        calendarView.setEntryFactory(param -> null);
-//        calendarView.setEntryEditPolicy(entry -> false);
         calendarView.addEventFilter(MouseEvent.DRAG_DETECTED, Event::consume);
         calendarView.addEventFilter(MouseEvent.MOUSE_DRAGGED, Event::consume);
         calendarView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
@@ -245,7 +248,7 @@ public class ConflictRuleProvider implements FormProvider {
     }
 
     private void editRule(ConflictRule rule, Label ruleLabel) {
-        Form editForm = createRuleForm(rule);
+        Form editForm = createForm(rule);
         Stage editStage = new Stage();
         editStage.setTitle("Edit Rule");
 
@@ -271,39 +274,56 @@ public class ConflictRuleProvider implements FormProvider {
     // ---------------------------------------------------------
     // 2. RULE MANAGEMENT
     // ---------------------------------------------------------
-
-    private Form createRuleForm(ConflictRule rule) {
-        SingleSelectionField<ConflictRule.FieldType> fieldField =
-                Field.ofSingleSelectionType(
-                                FXCollections.observableArrayList(ConflictRule.FieldType.values())
-                        )
-                        .label(FIELD);
-
-        fieldField.select(rule.getField().ordinal());
-        fieldField.selectionProperty().addListener((obs, old, val) -> rule.setField(val));
-
-        SingleSelectionField<ConflictRule.Operator> operatorField =
-                Field.ofSingleSelectionType(
-                                FXCollections.observableArrayList(ConflictRule.Operator.values())
-                        )
-                        .label(OPERATOR);
-
-        operatorField.select(rule.getOperator().ordinal());
-        operatorField.selectionProperty().addListener((obs, old, val) -> rule.setOperator(val));
-
-        var valueField =
-                Field.ofStringType(rule.getValue())
-                        .label(VALUE);
-        valueField.valueProperty().addListener((obs, old, val) -> rule.setValue(val));
-
-        var activeField =
-                Field.ofBooleanType(rule.isActive())
-                        .label(ACTIVE);
-        activeField.valueProperty().addListener((obs, old, val) -> rule.setActive(val));
-
+    @Override
+    public Form createForm(ConflictRule rule) {
         return Form.of(
-                Group.of(fieldField, operatorField, valueField, activeField)
+                Group.of(
+                        fieldTypeField(rule),
+                        operatorField(rule),
+                        valueField(rule),
+                        activeField(rule)
+                )
         ).title("Conflict Rule");
+    }
+
+    private SingleSelectionField<ConflictRule.FieldType> fieldTypeField(ConflictRule rule) {
+        var field = Field.ofSingleSelectionType(
+                FXCollections.observableArrayList(ConflictRule.FieldType.values())
+        ).label(FIELD);
+
+        field.select(rule.getField().ordinal());
+        field.selectionProperty().addListener((obs, old, val) -> rule.setField(val));
+
+        return field;
+    }
+
+    private SingleSelectionField<ConflictRule.Operator> operatorField(ConflictRule rule) {
+        var field = Field.ofSingleSelectionType(
+                FXCollections.observableArrayList(ConflictRule.Operator.values())
+        ).label(OPERATOR);
+
+        field.select(rule.getOperator().ordinal());
+        field.selectionProperty().addListener((obs, old, val) -> rule.setOperator(val));
+
+        return field;
+    }
+
+    private StringField valueField(ConflictRule rule) {
+        var field = Field.ofStringType(rule.getValue())
+                .label(VALUE);
+
+        field.valueProperty().addListener((obs, old, val) -> rule.setValue(val));
+
+        return field;
+    }
+
+    private BooleanField activeField(ConflictRule rule) {
+        var field = Field.ofBooleanType(rule.isActive())
+                .label(ACTIVE);
+
+        field.valueProperty().addListener((obs, old, val) -> rule.setActive(val));
+
+        return field;
     }
 
     public List<ConflictRule> getRules() {

@@ -8,16 +8,22 @@ import java.util.Objects;
 
 public class PersonalProfileMapper implements FormMapper<PersonalProfile> {
 
+    public static final String NAME = "Name";
+    public static final String EMAIL = "Email";
+    public static final String JOB = "Job";
+    public static final String AGE = "Age";
+    public static final String PREFERRED_SHIFT = "Preferred Shift";
+
     @Override
     public PersonalProfile fromForm(Form form) {
         List<? extends DataField<?, ?, ?>> dataFields = getDataFields(form);
 
         int workingHours = 0;
-        String name = getField(dataFields, "Name");
-        String email = getField(dataFields, "Email");
-        String job = getField(dataFields, "Job");
-        String age = getField(dataFields, "Age");
-        String preferredShift = getField(dataFields, "Preferred Shift");
+        String name = getField(dataFields, NAME);
+        String email = getField(dataFields, EMAIL);
+        String job = getField(dataFields, JOB);
+        String age = getField(dataFields, AGE);
+        String preferredShift = getField(dataFields, PREFERRED_SHIFT);
 
 
         return new PersonalProfile(
@@ -34,10 +40,10 @@ public class PersonalProfileMapper implements FormMapper<PersonalProfile> {
         List<? extends DataField<?, ?, ?>> dataFields = getDataFields(form);
 
         int workingHours = 0;
-        String email = getField(dataFields, "Email");
-        String job = getField(dataFields, "Job");
-        String age = getField(dataFields, "Age");
-        String preferredShift = getField(dataFields, "Preferred Shift");
+        String email = getField(dataFields, EMAIL);
+        String job = getField(dataFields, JOB);
+        String age = getField(dataFields, AGE);
+        String preferredShift = getField(dataFields, PREFERRED_SHIFT);
 
         personalProfile.setEmail(email);
         personalProfile.setJob(job);
@@ -49,11 +55,11 @@ public class PersonalProfileMapper implements FormMapper<PersonalProfile> {
     public void toForm(Form form, PersonalProfile profile) {
             getDataFields(form).forEach(field -> {
             switch (field.getLabel()) {
-                case "Name" -> field.valueProperty().setValue(profile.getName());
-                case "Age" -> field.valueProperty().setValue(profile.getAge());
-                case "Job" -> field.valueProperty().setValue(profile.getJob());
-                case "Email" -> field.valueProperty().setValue(profile.getEmail());
-                case "Preferred shift" -> field.valueProperty().setValue(profile.getPreferredShift());
+                case NAME -> field.valueProperty().setValue(profile.getName());
+                case AGE -> field.valueProperty().setValue(profile.getAge());
+                case JOB -> field.valueProperty().setValue(profile.getJob());
+                case EMAIL -> field.valueProperty().setValue(profile.getEmail());
+                case PREFERRED_SHIFT -> field.valueProperty().setValue(profile.getPreferredShift());
             }
         });
     }
