@@ -1,0 +1,209 @@
+@startuml
+
+/' diagram meta data start
+config=CallConfiguration;
+{
+  "rootMethod": "com.calendarfx.scheduler.ConflictResolutionCalculator#deepCopySources(List\u003cCalendarSource\u003e)",
+  "projectClassification": {
+    "searchMode": "OpenProject", // OpenProject, AllProjects
+    "includedProjects": "",
+    "pathEndKeywords": "*.impl",
+    "isClientPath": "",
+    "isClientName": "",
+    "isTestPath": "",
+    "isTestName": "",
+    "isMappingPath": "",
+    "isMappingName": "",
+    "isDataAccessPath": "",
+    "isDataAccessName": "",
+    "isDataStructurePath": "",
+    "isDataStructureName": "",
+    "isInterfaceStructuresPath": "",
+    "isInterfaceStructuresName": "",
+    "isEntryPointPath": "",
+    "isEntryPointName": "",
+    "treatFinalFieldsAsMandatory": false
+  },
+  "graphRestriction": {
+    "classPackageExcludeFilter": "",
+    "classPackageIncludeFilter": "",
+    "classNameExcludeFilter": "",
+    "classNameIncludeFilter": "",
+    "methodNameExcludeFilter": "",
+    "methodNameIncludeFilter": "",
+    "removeByInheritance": "", // inheritance/annotation based filtering is done in a second step
+    "removeByAnnotation": "",
+    "removeByClassPackage": "", // cleanup the graph after inheritance/annotation based filtering is done
+    "removeByClassName": "",
+    "cutMappings": false,
+    "cutEnum": true,
+    "cutTests": true,
+    "cutClient": true,
+    "cutDataAccess": false,
+    "cutInterfaceStructures": false,
+    "cutDataStructures": false,
+    "cutGetterAndSetter": true,
+    "cutConstructors": false
+  },
+  "graphTraversal": {
+    "forwardDepth": 3,
+    "backwardDepth": 3,
+    "classPackageExcludeFilter": "",
+    "classPackageIncludeFilter": "",
+    "classNameExcludeFilter": "",
+    "classNameIncludeFilter": "",
+    "methodNameExcludeFilter": "",
+    "methodNameIncludeFilter": "",
+    "hideMappings": false,
+    "hideDataStructures": false,
+    "hidePrivateMethods": true,
+    "hideInterfaceCalls": true, // indirection: implementation -> interface (is hidden) -> implementation
+    "onlyShowApplicationEntryPoints": false, // root node is included
+    "useMethodCallsForStructureDiagram": "ForwardOnly" // ForwardOnly, BothDirections, No
+  },
+  "details": {
+    "aggregation": "GroupByClass", // ByClass, GroupByClass, None
+    "showMethodParametersTypes": false,
+    "showMethodParametersNames": false,
+    "showMethodReturnType": false,
+    "showPackageLevels": 2,
+    "showCallOrder": false,
+    "edgeMode": "MethodsOnly", // TypesOnly, MethodsOnly, TypesAndMethods, MethodsAndDirectTypeUsage
+    "showDetailedClassStructure": false
+  },
+  "rootClass": "com.calendarfx.scheduler.ConflictResolutionCalculator",
+  "extensionCallbackMethod": "calendar" // qualified.class.name#methodName - signature: public static String method(String)
+}
+diagram meta data end '/
+
+
+
+digraph g {
+    rankdir="LR"
+    splines=polyline
+    
+
+'nodes 
+subgraph cluster_428683408 { 
+   	label=calendarfx
+	labeljust=l
+	fillcolor="#ececec"
+	style=filled
+   
+   subgraph cluster_887893795 { 
+   	label=scheduler
+	labeljust=l
+	fillcolor="#d8d8d8"
+	style=filled
+   
+   subgraph cluster_146669831 { 
+   	label=GreatCalendar
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   GreatCalendar174319830XXXGreatCalendar409199680[
+	label="+ GreatCalendar()"
+	style=filled
+	fillcolor=white
+	tooltip="GreatCalendar
+
+null"
+	fontcolor=darkgreen
+];
+} 
+
+subgraph cluster_185058996 { 
+   	label=GreatEntry
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   GreatEntry146669831XXXGreatEntry1741999235[
+	label="+ GreatEntry()"
+	style=filled
+	fillcolor=white
+	tooltip="GreatEntry
+
+null"
+	fontcolor=darkgreen
+];
+} 
+
+subgraph cluster_44108295 { 
+   	label=GreatCalendarSerializer
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   GreatCalendarSerializer174319830XXXfromCalendar113680546[
+	label="+ fromCalendar()"
+	style=filled
+	fillcolor=white
+	tooltip="GreatCalendarSerializer
+
+null"
+	fontcolor=darkgreen
+];
+
+GreatCalendarSerializer174319830XXXfromEntry2029054071[
+	label="+ fromEntry()"
+	style=filled
+	fillcolor=white
+	tooltip="GreatCalendarSerializer
+
+null"
+	fontcolor=darkgreen
+];
+
+GreatCalendarSerializer174319830XXXtoCalendar163348683[
+	label="+ toCalendar()"
+	style=filled
+	fillcolor=white
+	tooltip="GreatCalendarSerializer
+
+null"
+	fontcolor=darkgreen
+];
+
+GreatCalendarSerializer174319830XXXtoEntry1747110395[
+	label="+ toEntry()"
+	style=filled
+	fillcolor=white
+	tooltip="GreatCalendarSerializer
+
+null"
+	fontcolor=darkgreen
+];
+} 
+
+subgraph cluster_621719588 { 
+   	label=ConflictResolutionCalculator
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   ConflictResolutionCalculator174319830XXXdeepCopySources1531991879[
+	label="+ deepCopySources()"
+	style=filled
+	fillcolor=white
+	tooltip="ConflictResolutionCalculator
+
+null"
+	penwidth=4
+	fontcolor=darkgreen
+];
+} 
+} 
+} 
+
+'edges    
+ConflictResolutionCalculator174319830XXXdeepCopySources1531991879 -> GreatCalendarSerializer174319830XXXfromCalendar113680546;
+ConflictResolutionCalculator174319830XXXdeepCopySources1531991879 -> GreatCalendarSerializer174319830XXXtoCalendar163348683;
+GreatCalendarSerializer174319830XXXfromCalendar113680546 -> GreatCalendar174319830XXXGreatCalendar409199680;
+GreatCalendarSerializer174319830XXXfromCalendar113680546 -> GreatCalendarSerializer174319830XXXfromEntry2029054071;
+GreatCalendarSerializer174319830XXXfromEntry2029054071 -> GreatEntry146669831XXXGreatEntry1741999235;
+GreatCalendarSerializer174319830XXXtoCalendar163348683 -> GreatCalendarSerializer174319830XXXtoEntry1747110395;
+    
+}
+@enduml

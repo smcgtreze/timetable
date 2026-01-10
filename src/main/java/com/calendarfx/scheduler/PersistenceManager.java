@@ -55,7 +55,8 @@ public class PersistenceManager {
             mapper.writeValue(filePath.toFile(), object);
             System.out.println("Saved " + object.getClass().getSimpleName() + " to " + filePath);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to save object", e);
+            throw new RuntimeException("Failed to save " + object.getClass().getSimpleName() + " to " +
+                    filePath + " since " + (e.getMessage() != null ? e.getMessage() : e.toString()), e);
         }
     }
 
@@ -63,7 +64,8 @@ public class PersistenceManager {
         try {
             return mapper.readValue(filePath.toFile(), mapper.getTypeFactory().constructCollectionType(List.class, clazz));
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load object", e);
+            throw new RuntimeException("Failed to load " + clazz.getSimpleName() + " from " +
+                    filePath + " since " + (e.getMessage() != null ? e.getMessage() : e.toString()), e);
         }
     }
 }

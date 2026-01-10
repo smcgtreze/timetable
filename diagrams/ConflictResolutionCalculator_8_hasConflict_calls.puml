@@ -1,0 +1,181 @@
+@startuml
+
+/' diagram meta data start
+config=CallConfiguration;
+{
+  "rootMethod": "com.calendarfx.scheduler.ConflictResolutionCalculator#hasConflict(Entry\u003c?\u003e)",
+  "projectClassification": {
+    "searchMode": "OpenProject", // OpenProject, AllProjects
+    "includedProjects": "",
+    "pathEndKeywords": "*.impl",
+    "isClientPath": "",
+    "isClientName": "",
+    "isTestPath": "",
+    "isTestName": "",
+    "isMappingPath": "",
+    "isMappingName": "",
+    "isDataAccessPath": "",
+    "isDataAccessName": "",
+    "isDataStructurePath": "",
+    "isDataStructureName": "",
+    "isInterfaceStructuresPath": "",
+    "isInterfaceStructuresName": "",
+    "isEntryPointPath": "",
+    "isEntryPointName": "",
+    "treatFinalFieldsAsMandatory": false
+  },
+  "graphRestriction": {
+    "classPackageExcludeFilter": "",
+    "classPackageIncludeFilter": "",
+    "classNameExcludeFilter": "",
+    "classNameIncludeFilter": "",
+    "methodNameExcludeFilter": "",
+    "methodNameIncludeFilter": "",
+    "removeByInheritance": "", // inheritance/annotation based filtering is done in a second step
+    "removeByAnnotation": "",
+    "removeByClassPackage": "", // cleanup the graph after inheritance/annotation based filtering is done
+    "removeByClassName": "",
+    "cutMappings": false,
+    "cutEnum": true,
+    "cutTests": true,
+    "cutClient": true,
+    "cutDataAccess": false,
+    "cutInterfaceStructures": false,
+    "cutDataStructures": false,
+    "cutGetterAndSetter": true,
+    "cutConstructors": false
+  },
+  "graphTraversal": {
+    "forwardDepth": 3,
+    "backwardDepth": 3,
+    "classPackageExcludeFilter": "",
+    "classPackageIncludeFilter": "",
+    "classNameExcludeFilter": "",
+    "classNameIncludeFilter": "",
+    "methodNameExcludeFilter": "",
+    "methodNameIncludeFilter": "",
+    "hideMappings": false,
+    "hideDataStructures": false,
+    "hidePrivateMethods": true,
+    "hideInterfaceCalls": true, // indirection: implementation -> interface (is hidden) -> implementation
+    "onlyShowApplicationEntryPoints": false, // root node is included
+    "useMethodCallsForStructureDiagram": "ForwardOnly" // ForwardOnly, BothDirections, No
+  },
+  "details": {
+    "aggregation": "GroupByClass", // ByClass, GroupByClass, None
+    "showMethodParametersTypes": false,
+    "showMethodParametersNames": false,
+    "showMethodReturnType": false,
+    "showPackageLevels": 2,
+    "showCallOrder": false,
+    "edgeMode": "MethodsOnly", // TypesOnly, MethodsOnly, TypesAndMethods, MethodsAndDirectTypeUsage
+    "showDetailedClassStructure": false
+  },
+  "rootClass": "com.calendarfx.scheduler.ConflictResolutionCalculator",
+  "extensionCallbackMethod": "calendar" // qualified.class.name#methodName - signature: public static String method(String)
+}
+diagram meta data end '/
+
+
+
+digraph g {
+    rankdir="LR"
+    splines=polyline
+    
+
+'nodes 
+subgraph cluster_428683408 { 
+   	label=calendarfx
+	labeljust=l
+	fillcolor="#ececec"
+	style=filled
+   
+   subgraph cluster_887893795 { 
+   	label=scheduler
+	labeljust=l
+	fillcolor="#d8d8d8"
+	style=filled
+   
+   subgraph cluster_289353117 { 
+   	label=ConflictRuleProvider
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   ConflictRuleProvider174319830XXXshowFormWindow1659240985[
+	label="+ showFormWindow()"
+	style=filled
+	fillcolor=white
+	tooltip="ConflictRuleProvider
+
+null"
+	fontcolor=darkgreen
+];
+} 
+
+subgraph cluster_621719588 { 
+   	label=ConflictResolutionCalculator
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   ConflictResolutionCalculator174319830XXXcalculate0[
+	label="+ calculate()"
+	style=filled
+	fillcolor=white
+	tooltip="ConflictResolutionCalculator
+
+null"
+	fontcolor=darkgreen
+];
+
+ConflictResolutionCalculator174319830XXXfindEntryById523814600[
+	label="+ findEntryById()"
+	style=filled
+	fillcolor=white
+	tooltip="ConflictResolutionCalculator
+
+null"
+	fontcolor=darkgreen
+];
+
+ConflictResolutionCalculator174319830XXXhasConflict2029054071[
+	label="+ hasConflict()"
+	style=filled
+	fillcolor=white
+	tooltip="ConflictResolutionCalculator
+
+null"
+	penwidth=4
+	fontcolor=darkgreen
+];
+} 
+
+subgraph cluster_807296287 { 
+   	label=CalendarApp
+	labeljust=l
+	fillcolor=white
+	style=filled
+   
+   CalendarApp174319830XXXstart80204510[
+	label="+ start()"
+	style=filled
+	fillcolor=white
+	tooltip="CalendarApp
+
+null"
+	fontcolor=darkgreen
+];
+} 
+} 
+} 
+
+'edges    
+CalendarApp174319830XXXstart80204510 -> ConflictResolutionCalculator174319830XXXhasConflict2029054071;
+CalendarApp174319830XXXstart80204510 -> ConflictRuleProvider174319830XXXshowFormWindow1659240985;
+ConflictResolutionCalculator174319830XXXcalculate0 -> ConflictResolutionCalculator174319830XXXhasConflict2029054071;
+ConflictResolutionCalculator174319830XXXhasConflict2029054071 -> ConflictResolutionCalculator174319830XXXfindEntryById523814600;
+ConflictRuleProvider174319830XXXshowFormWindow1659240985 -> ConflictResolutionCalculator174319830XXXcalculate0;
+    
+}
+@enduml

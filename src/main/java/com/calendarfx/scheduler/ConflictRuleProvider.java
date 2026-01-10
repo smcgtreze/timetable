@@ -1,25 +1,27 @@
 package com.calendarfx.scheduler;
 
-import com.dlsc.formsfx.model.structure.Field;
-import com.dlsc.formsfx.model.structure.Form;
-import com.dlsc.formsfx.model.structure.Group;
-import com.dlsc.formsfx.model.structure.SingleSelectionField;
+import com.calendarfx.model.Entry;
+import com.calendarfx.view.CalendarView;
+import com.dlsc.formsfx.model.structure.*;
 import com.dlsc.formsfx.view.renderer.FormRenderer;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.MapChangeListener;
+import javafx.event.Event;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
-public class ConflictRuleProvider implements FormProvider {
+public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
     public static final int HGAP = 10;
     public static final int VGAP = 5;
@@ -28,14 +30,14 @@ public class ConflictRuleProvider implements FormProvider {
     public static final String VALUE = "Value";
     public static final String ACTIVE = "Active";
     public static final String SAVE_AND_EXIT = "Save and Exit";
-    public static final String GREAT_BUTTON_STYLE_ORANGE = "-fx-background-color: orange; -fx-text-fill: black; -fx-font-weight: bold; -fx-font-size: 12px;";
-    public static final String GREAT_BUTTON_STYLE_RED = "-fx-background-color: red; -fx-text-fill: black; -fx-font-weight: bold; -fx-font-size: 12px;";
     private final List<String> preferredShift;
     private final int width;
     private final int height;
     private final int buttonSpacing;
 
-    private final List<ConflictRule> rules = new ArrayList<>();
+    private List<ConflictRule> rules = new ArrayList<>();
+    private VBox ruleList;
+    private ConflictResolutionCalculator calculator;
 
     public ConflictRuleProvider(List<String> preferredShift, int width, int height, int buttonSpacing) {
         this.preferredShift = preferredShift;
@@ -44,22 +46,29 @@ public class ConflictRuleProvider implements FormProvider {
         this.buttonSpacing = buttonSpacing;
     }
 
+    public void setCalculator(ConflictResolutionCalculator calculator) {
+
+        this.calculator = calculator;
+    }
     // ---------------------------------------------------------
     // 1. FORM CREATION
     // ---------------------------------------------------------
-
     @Override
     public Form createForm() {
+        ruleList = new VBox(5);
+        ruleList.setPadding(new Insets(this.buttonSpacing, 0, 0, 0));
+
+        rules.forEach((rule) -> {
+            createSupportButtons(ruleList, rule);
+        });
+
         return Form.of(
-        ).title("Conflict Rules");
+        ).title("Rules");
     }
 
     @Override
     public void showFormWindow(Stage stage, Form form, Runnable onSave) {
         FormRenderer renderer = new FormRenderer(form);
-
-        VBox ruleList = new VBox(5);
-        ruleList.setPadding(new Insets(this.buttonSpacing, 0, 0, 0));
 
         ComboBox<ConflictRule.FieldType> fieldBox = new ComboBox<>();
         fieldBox.getItems().addAll(ConflictRule.FieldType.values());
@@ -72,8 +81,10 @@ public class ConflictRuleProvider implements FormProvider {
         CheckBox activeBox = new CheckBox("Active");
         activeBox.setSelected(true);
 
-        Button defineRuleButton = new Button("Define Conflict Rule");
-        Button duplicateRuleButton = new Button("Duplicate Conflict Rule");
+        Button defineRuleButton = new Button("Define Rule");
+        Button duplicateRuleButton = new Button("Duplicate Rule");
+        Button resolveButton = new Button("Resolve Conflicts!");
+        Button applyButton = new Button("Apply resolutions");
 
         GridPane ruleBuilder = new GridPane();
         ruleBuilder.setHgap(HGAP);
@@ -94,6 +105,14 @@ public class ConflictRuleProvider implements FormProvider {
 
         ruleBuilder.add(defineRuleButton, 4, 1);
         ruleBuilder.add(duplicateRuleButton, 5, 1);
+        ruleBuilder.add(resolveButton, 6, 1);
+        ruleBuilder.add(applyButton, 7, 1);
+
+        Map<String, ConflictRule> currentConflicts = calculator.getCurrentConflicts();
+        ConflictTable conflictTable = new ConflictTable(currentConflicts);
+        calculator.getCurrentConflicts().addListener((MapChangeListener<String, ConflictRule>) change -> {
+            conflictTable.refreshData(calculator.getCurrentConflicts());
+        });
 
         Button saveButton = new Button(SAVE_AND_EXIT);
 
@@ -102,11 +121,18 @@ public class ConflictRuleProvider implements FormProvider {
 
         VBox layout = new VBox(10);
         layout.setPadding(new Insets(this.buttonSpacing));
-        layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons);
+
+        Label status = new Label();
+
+        CalendarView calendarView = calculator.getSnapshotCalendarView();
+        VBox.setVgrow(calendarView, Priority.ALWAYS);
+        layout.getChildren().addAll(renderer, ruleBuilder, ruleList, buttons, conflictTable, calendarView, status);
 
         Scene scene = new Scene(layout, width, height);
+        makeCalendarViewReadOnly(calendarView);
+        calendarView.showWeekPage();
         stage.setScene(scene);
-        stage.setTitle("Conflict Rule Editor");
+        stage.setTitle("Rule Editor");
         stage.show();
 
         saveButton.setOnAction(e -> {
@@ -116,12 +142,44 @@ public class ConflictRuleProvider implements FormProvider {
 
         defineRuleButton.setOnAction(e -> {
             defineRule(fieldBox, operatorBox, valueField, activeBox, ruleList, false);
+            status.setText("Rule defined successfully");
         });
 
         duplicateRuleButton.setOnAction(e -> {
             defineRule(fieldBox, operatorBox, valueField, activeBox, ruleList, true);
+            status.setText("Rule duplicated successfully");
+        });
+
+        resolveButton.setOnAction(e -> {
+            resolveHandler();
+            status.setText("Resolved successfully");
+        });
+
+        applyButton.setOnAction(e -> {
+            calculator.applySnapshot(
+                    calculator.getOriginalCalendarView(),
+                    calculator.getSnapshotCalendarView()
+            );
+            status.setText("Snapshot applied");
         });
     }
+
+    private void makeCalendarViewReadOnly(CalendarView calendarView) {
+        calendarView.setShowSearchField(false);
+        calendarView.setShowToolBar(false);
+        calendarView.setShowAddCalendarButton(false);
+        calendarView.setShowPrintButton(false);
+        calendarView.setEntryDetailsPopOverContentCallback(param -> null);
+        calendarView.addEventFilter(MouseEvent.DRAG_DETECTED, Event::consume);
+        calendarView.addEventFilter(MouseEvent.MOUSE_DRAGGED, Event::consume);
+        calendarView.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+            if (event.isPrimaryButtonDown()) {
+                event.consume();
+            }
+        });
+    }
+
+    private void resolveHandler() { calculator.calculate(); }
 
     private void defineRule(ComboBox<ConflictRule.FieldType> fieldBox,
                             ComboBox<ConflictRule.Operator> operatorBox,
@@ -147,10 +205,18 @@ public class ConflictRuleProvider implements FormProvider {
         );
         rules.add(rule);
 
-        // UI entry for current rule
-        HBox ruleEntry = new HBox(10);
-        ruleEntry.setAlignment(Pos.CENTER_LEFT);
+        // UI entry for support of current rule
+        createSupportButtons(ruleList, rule);
 
+        if (!skipClear) {
+            fieldBox.setValue(null);
+            operatorBox.setValue(null);
+            valueField.clear();
+            activeBox.setSelected(true);
+        }
+    }
+
+    private void createSupportButtons(VBox ruleList, ConflictRule rule) {
         Label ruleLabel = new Label(formatRule(rule));
 
         CheckBox activeToggle = new CheckBox("Active");
@@ -162,6 +228,9 @@ public class ConflictRuleProvider implements FormProvider {
 
         Button deleteButton = new Button("Delete");
         deleteButton.setTooltip(new Tooltip("Delete related rule"));
+
+        HBox ruleEntry = new HBox(10);
+        ruleEntry.setAlignment(Pos.CENTER_LEFT);
 
         // EDIT RULE
         editButton.setOnAction(e -> {
@@ -176,17 +245,10 @@ public class ConflictRuleProvider implements FormProvider {
 
         ruleEntry.getChildren().addAll(ruleLabel, activeToggle, editButton, deleteButton);
         ruleList.getChildren().add(ruleEntry);
-
-        if (!skipClear) {
-            fieldBox.setValue(null);
-            operatorBox.setValue(null);
-            valueField.clear();
-            activeBox.setSelected(true);
-        }
     }
 
     private void editRule(ConflictRule rule, Label ruleLabel) {
-        Form editForm = createRuleForm(rule);
+        Form editForm = createForm(rule);
         Stage editStage = new Stage();
         editStage.setTitle("Edit Rule");
 
@@ -212,43 +274,64 @@ public class ConflictRuleProvider implements FormProvider {
     // ---------------------------------------------------------
     // 2. RULE MANAGEMENT
     // ---------------------------------------------------------
-
-    private Form createRuleForm(ConflictRule rule) {
-        SingleSelectionField<ConflictRule.FieldType> fieldField =
-                Field.ofSingleSelectionType(
-                                FXCollections.observableArrayList(ConflictRule.FieldType.values())
-                        )
-                        .label(FIELD);
-
-        fieldField.select(rule.getField().ordinal());
-        fieldField.selectionProperty().addListener((obs, old, val) -> rule.setField(val));
-
-        SingleSelectionField<ConflictRule.Operator> operatorField =
-                Field.ofSingleSelectionType(
-                                FXCollections.observableArrayList(ConflictRule.Operator.values())
-                        )
-                        .label(OPERATOR);
-
-        operatorField.select(rule.getOperator().ordinal());
-        operatorField.selectionProperty().addListener((obs, old, val) -> rule.setOperator(val));
-
-        var valueField =
-                Field.ofStringType(rule.getValue())
-                        .label(VALUE);
-        valueField.valueProperty().addListener((obs, old, val) -> rule.setValue(val));
-
-        var activeField =
-                Field.ofBooleanType(rule.isActive())
-                        .label(ACTIVE);
-        activeField.valueProperty().addListener((obs, old, val) -> rule.setActive(val));
-
+    @Override
+    public Form createForm(ConflictRule rule) {
         return Form.of(
-                Group.of(fieldField, operatorField, valueField, activeField)
+                Group.of(
+                        fieldTypeField(rule),
+                        operatorField(rule),
+                        valueField(rule),
+                        activeField(rule)
+                )
         ).title("Conflict Rule");
+    }
+
+    private SingleSelectionField<ConflictRule.FieldType> fieldTypeField(ConflictRule rule) {
+        var field = Field.ofSingleSelectionType(
+                FXCollections.observableArrayList(ConflictRule.FieldType.values())
+        ).label(FIELD);
+
+        field.select(rule.getField().ordinal());
+        field.selectionProperty().addListener((obs, old, val) -> rule.setField(val));
+
+        return field;
+    }
+
+    private SingleSelectionField<ConflictRule.Operator> operatorField(ConflictRule rule) {
+        var field = Field.ofSingleSelectionType(
+                FXCollections.observableArrayList(ConflictRule.Operator.values())
+        ).label(OPERATOR);
+
+        field.select(rule.getOperator().ordinal());
+        field.selectionProperty().addListener((obs, old, val) -> rule.setOperator(val));
+
+        return field;
+    }
+
+    private StringField valueField(ConflictRule rule) {
+        var field = Field.ofStringType(rule.getValue())
+                .label(VALUE);
+
+        field.valueProperty().addListener((obs, old, val) -> rule.setValue(val));
+
+        return field;
+    }
+
+    private BooleanField activeField(ConflictRule rule) {
+        var field = Field.ofBooleanType(rule.isActive())
+                .label(ACTIVE);
+
+        field.valueProperty().addListener((obs, old, val) -> rule.setActive(val));
+
+        return field;
     }
 
     public List<ConflictRule> getRules() {
         return Collections.unmodifiableList(rules);
+    }
+
+    public void setRules( final List<ConflictRule> conflictRules) {
+        this.rules = conflictRules;
     }
 
     public void deleteRule(ConflictRule rule) {
@@ -265,4 +348,40 @@ public class ConflictRuleProvider implements FormProvider {
         return copy;
     }
 
+    public class ConflictTable extends TableView<ConflictTable.Row> {
+        HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
+        public void refreshData(Map<String, ConflictRule> conflicts) {
+            getItems().clear();
+            conflicts.forEach((entry, rule) ->
+                    getItems().add(new Row(getEntryDescription(entryMap.get(entry)), rule.getFullName()))
+            );
+        }
+
+        public record Row(String entry, String rule) {
+        }
+
+        public ConflictTable(Map<String, ConflictRule> conflicts) {
+
+            TableColumn<Row, String> entryCol = new TableColumn<>("Entry");
+            entryCol.setCellValueFactory(c ->
+                    new SimpleStringProperty(c.getValue().entry()));
+
+            TableColumn<Row, String> ruleCol = new TableColumn<>("Rule");
+            ruleCol.setCellValueFactory(c ->
+                    new SimpleStringProperty(c.getValue().rule()));
+
+            getColumns().addAll(entryCol, ruleCol);
+
+            conflicts.forEach((entry, rule) -> {
+                getItems().add(new Row(getEntryDescription( entryMap.get(entry) ), rule.getFullName()));
+            });
+
+            setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY);
+            setPrefHeight(200);
+        }
+
+        private String getEntryDescription(Entry<?> entry) {
+            return entry.getTitle() + " " + entry.getStartDate() + " " + entry.getStartTime() + " " + entry.getEndDate() + " " + entry.getEndTime();
+        }
+    }
 }

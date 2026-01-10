@@ -8,6 +8,7 @@ module com.calendarfx.scheduler {
     opens com.calendarfx.scheduler to com.fasterxml.jackson.databind;
     requires com.fasterxml.jackson.datatype.jsr310;
     requires javafx.base;
+    requires com.fasterxml.jackson.annotation;
 
     exports com.calendarfx.scheduler;
 }

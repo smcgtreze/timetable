@@ -27,7 +27,7 @@ public class GreatCalendarSerializer implements CalendarSerializer {
     @Override
     public GreatCalendar fromCalendar(Calendar calendar) {
         List<GreatCalendar.GreatEntry> dtoEntries = calendar.findEntries("").stream()
-                .map(entry -> (GreatCalendar.GreatEntry) fromEntry((Entry<?>) entry))
+                .map(entry -> fromEntry((Entry<?>) entry))
                 .toList();
 
         GreatCalendar gc = new GreatCalendar(calendar.getName(), dtoEntries );
