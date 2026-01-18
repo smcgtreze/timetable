@@ -152,6 +152,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
         resolveButton.setOnAction(e -> {
             resolveHandler();
+            conflictTable.refreshData(calculator.getCurrentConflicts());
             status.setText("Resolved successfully");
         });
 
@@ -160,6 +161,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
                     calculator.getOriginalCalendarView(),
                     calculator.getSnapshotCalendarView()
             );
+            conflictTable.refreshData(calculator.getCurrentConflicts());
             status.setText("Snapshot applied");
         });
     }
@@ -349,9 +351,9 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
     }
 
     public class ConflictTable extends TableView<ConflictTable.Row> {
-        HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
         public void refreshData(Map<String, ConflictRule> conflicts) {
             getItems().clear();
+            HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
             conflicts.forEach((entry, rule) ->
                     getItems().add(new Row(getEntryDescription(entryMap.get(entry)), rule.getFullName()))
             );
@@ -372,6 +374,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
             getColumns().addAll(entryCol, ruleCol);
 
+            HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
             conflicts.forEach((entry, rule) -> {
                 getItems().add(new Row(getEntryDescription( entryMap.get(entry) ), rule.getFullName()));
             });

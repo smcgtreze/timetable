@@ -197,6 +197,12 @@ public class ConflictResolutionCalculator {
             ConflictRule rule = currentConflicts.get(entryId);
             Entry<?> entry = entriesMap.get(entryId);
 
+            // Skip if entry is null - shouldn't happen but safety check
+            if (entry == null) {
+                System.err.println("Warning: Entry with ID " + entryId + " not found in entriesMap.");
+                continue;
+            }
+
             boolean solved = switch (rule.getField()) {
                 case WORKING_HOURS -> solveWorkingHours(entry, rule);
                 case PREFERRED_SHIFT -> solvePreferredShift(entry, rule);
