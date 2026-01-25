@@ -31,7 +31,6 @@ class SchedulerIntegrationTest {
     @Test
     void testPersonalProfileCreation() {
         PersonalProfile profile = new PersonalProfile(
-            40,
             "john@example.com",
             "Engineer",
             30,
@@ -44,7 +43,6 @@ class SchedulerIntegrationTest {
         assertEquals("Engineer", profile.getJob());
         assertEquals(30, profile.getAge());
         assertEquals("9to5", profile.getPreferredShift());
-        assertEquals(40, profile.getWorkingHours());
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.calendarfx.view.CalendarView;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -115,6 +116,10 @@ public class ConflictResolutionCalculator {
 
         boolean existsConflict = false;
         final String calendarName = entry.getCalendar().getName();
+        
+        // Get working hours from the original calendar view (GreatCalendar mapping)
+        final int workingHours = getWorkingHoursFromCalendar(originalCalendarView, calendarName);
+        
         PersonalProfile personalProfile = personForms.stream()
                 .filter(p -> p.getName().equals(calendarName))
                 .findFirst()
@@ -128,9 +133,7 @@ public class ConflictResolutionCalculator {
             switch (rule.getField()) {
                 case NAME -> ruleConflict = calendarName.equals(rule.getValue());
                 case WORKING_HOURS -> {
-                    if (personalProfile != null) {
-                        ruleConflict = evaluate(rule.getValue(), operator, String.valueOf(personalProfile.getWorkingHours()));
-                    }
+                    ruleConflict = evaluate(rule.getValue(), operator, String.valueOf(workingHours));
                 }
                 case PREFERRED_SHIFT -> {
                     if (personalProfile != null) {
@@ -189,7 +192,6 @@ public class ConflictResolutionCalculator {
 
     public boolean calculate() {
 
-        List<ConflictResult> conflictResults = new ArrayList<>();
         List<Entry<?>> resolvedEntries = new ArrayList<>();
 
         // Iterate safely over a snapshot of the key set to avoid concurrent-modification surprises
@@ -199,14 +201,13 @@ public class ConflictResolutionCalculator {
 
             // Skip if entry is null - shouldn't happen but safety check
             if (entry == null) {
-                System.err.println("Warning: Entry with ID " + entryId + " not found in entriesMap.");
                 continue;
             }
 
-            boolean solved = switch (rule.getField()) {
+            switch (rule.getField()) {
                 case WORKING_HOURS -> solveWorkingHours(entry, rule);
                 case PREFERRED_SHIFT -> solvePreferredShift(entry, rule);
-                default -> false;
+                default -> {}
             };
 
             // After attempting resolution, re-check conflict
@@ -215,8 +216,6 @@ public class ConflictResolutionCalculator {
             if (!stillConflicted) {
                 resolvedEntries.add(entry);
             }
-
-            conflictResults.add(new ConflictResult(entry, !stillConflicted));
         }
 
         // Remove resolved entries AFTER iteration
@@ -237,6 +236,17 @@ public class ConflictResolutionCalculator {
         };
     }
 
+    /*  Goal: ADD MORE HOURS to reach the required working hours
+
+    Rule 1 Extend end time: If entry ends before 18:00, extend the end time by 30-60 minutes
+    Rule 2 Extend start time: If entry starts after 9:00, move start time earlier by 30-60 minutes
+    Rule 3 Priority by duration:
+        Very short (< 1 hour): Extend both end time AND start time
+        Short (1-2 hours): Extend end time preferentially
+        Medium (2-3 hours): Extend start time preferentially
+        Long (3-4 hours): Small adjustments only
+    Rule 4 Respect boundaries: Never extend before 8:00 or after 19:00
+    Rule 5 Accumulate: Apply multiple rules if needed to reach target hours */
     private boolean solveWorkingHoursLesser(List<Entry<?>> entries) {
         List<Entry<?>> removable = entries.stream()
                 .filter(e -> e.getDuration().toHours() <= 1
@@ -253,6 +263,19 @@ public class ConflictResolutionCalculator {
         return !removable.isEmpty();
     }
 
+    /*  Goal: REDUCE HOURS to meet the maximum working hours limit
+
+    Rule 1 Shorten end time: If entry ends after 9:00 AM, reduce the end time by 30-60 minutes
+    Rule 2 Shorten start time: If entry starts before 18:00, move start time later by 30-60 minutes
+    Rule 3 Priority by duration:
+        Very long (> 5 hours): Reduce by 60 minutes
+        Long (4-5 hours): Reduce by 45 minutes
+        Medium (2-4 hours): Reduce by 30 minutes
+        Short (< 2 hours): Consider removing or minimal reduction
+    Rule 4 Out-of-hours handling:
+        If before 9:00 AM: shift entire entry to start at 9:00 and keep duration
+        If after 18:00: shift entire entry to end at 18:00 and keep duration
+    Rule 5 Accumulate: Apply multiple rules iteratively until target is met */
     private boolean solveWorkingHoursGreater(List<Entry<?>> entries) {
         List<Entry<?>> addable = entries.stream()
                 .filter(e -> e.getDuration().toHours() <= 1 ||
@@ -271,6 +294,25 @@ public class ConflictResolutionCalculator {
     private boolean solvePreferredShift(Entry<?> entry, ConflictRule rule) {
         // Attempt to solve preferred shift, this is secondary and might not be solved
         return false;
+    }
+
+    /**
+     * Gets the working hours for a calendar from the CalendarView
+     */
+    private int getWorkingHoursFromCalendar(CalendarView view, String calendarName) {
+        if (view == null) return 0;
+        
+        return (int) view.getCalendarSources().stream()
+                .flatMap(source -> source.getCalendars().stream())
+                .filter(calendar -> calendar.getName().equals(calendarName))
+                .flatMap(calendar -> calendar.findEntries("").stream())
+                .mapToLong(e -> {
+                    Entry<?> entry = (Entry<?>) e;
+                    LocalDateTime start = LocalDateTime.of(entry.getStartDate(), entry.getStartTime());
+                    LocalDateTime end = LocalDateTime.of(entry.getEndDate(), entry.getEndTime());
+                    return java.time.Duration.between(start, end).toHours();
+                })
+                .sum();
     }
 
     public static Optional<Entry<?>> findEntryById(CalendarView view, String id) {

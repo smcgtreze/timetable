@@ -32,7 +32,6 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CalendarApp extends Application {
@@ -151,12 +150,12 @@ public class CalendarApp extends Application {
                         return (int) java.time.Duration.between(start, end).toHours();
                     }).sum();
 
-            if (personForms != null) {
-                // Refresh calendar working hours
-                Optional<PersonalProfile> personalProfile = personForms.stream()
-                        .filter(p -> p.getName().equals(calendar.getName()))
-                        .findFirst();
-                personalProfile.ifPresent(p -> p.setWorkingHours(totalHoursInCalendar));
+            // Update working hours in GreatCalendar (cached version)
+            if (cachedCalendars != null) {
+                cachedCalendars.stream()
+                        .filter(gc -> gc.getName().equals(calendar.getName()))
+                        .findFirst()
+                        .ifPresent(gc -> gc.setWorkingHours(totalHoursInCalendar));
             }
         });
     }
@@ -280,13 +279,30 @@ public class CalendarApp extends Application {
     }
 
     private static void saveInformation() {
-        cachedCalendars = calendarView.getCalendars().stream()
-                .map(persistenceManager.calendarSerializer::fromCalendar)
-                .toList();
-
+        cachedCalendars = getUpdatedCalendars();
+        
         persistenceManager.saveInformation(cachedCalendars);
         persistenceManager.saveInformation(ruleForms);
         persistenceManager.saveInformation(personForms);
+    }
+
+    private static List<GreatCalendar> getUpdatedCalendars() {
+        // Rebuild cachedCalendars from the current calendar view to capture all entry changes
+        List<GreatCalendar> updatedCalendars = calendarView.getCalendars().stream()
+                .map(persistenceManager.calendarSerializer::fromCalendar)
+                .toList();
+        
+        // Copy over the working hours from the previous cachedCalendars to maintain calculated values
+        if (cachedCalendars != null && !cachedCalendars.isEmpty()) {
+            updatedCalendars.forEach(updatedCal -> {
+                cachedCalendars.stream()
+                        .filter(cached -> cached.getName().equals(updatedCal.getName()))
+                        .findFirst()
+                        .ifPresent(cached -> updatedCal.setWorkingHours(cached.getWorkingHours()));
+            });
+        }
+        
+        return updatedCalendars;
     }
 
     private static void loadInformation() {

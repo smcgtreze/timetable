@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PersonalProfile {
     private final String name;
-    private int workingHours;
     private String email;
     private String job;
     private int age;
@@ -13,23 +12,17 @@ public class PersonalProfile {
 
     @JsonCreator
     public PersonalProfile(
-            @JsonProperty("Working Hours") int workingHours,
             @JsonProperty("Email") String email,
             @JsonProperty("Job") String job,
             @JsonProperty("Age") int age,
             @JsonProperty("Name") String name,
             @JsonProperty("Preferred Shift") String preferredShift
     ) {
-        this.workingHours = workingHours;
         this.email = email;
         this.job = job;
         this.age = age;
         this.name = name;
         this.preferredShift = preferredShift;
-    }
-
-    public int getWorkingHours() {
-        return workingHours;
     }
 
     public String getEmail() {
@@ -54,10 +47,6 @@ public class PersonalProfile {
 
     // Note: Intentionally there is no setter for the personal name. The user may not change the name after it has been set.
     // This parameter is used to do the mapping between calendars and personalProfiles.
-    public void setWorkingHours(int workingHours) {
-        this.workingHours = workingHours;
-    }
-
     public void setEmail(String email) {
         this.email = email;
     }
