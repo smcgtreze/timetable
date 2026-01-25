@@ -37,11 +37,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CalendarApp extends Application {
 
-    public static final String ADD_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
-    public static final String CONFLICT_BUTTON_STYLE = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
-    public static final String REFRESH_BUTTON_STYLE = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
-    public static final String EDIT_BUTTON_STYLE = "-fx-background-color: blue; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
-    public static final String WARNING_STYLE = "-fx-background-color: rgba(255,0,0,0.3); -fx-border-color: red;";
+    public static final String ADD_BUTTON_STYLE = StyleConstants.ADD_BUTTON_STYLE;
+    public static final String CONFLICT_BUTTON_STYLE = StyleConstants.CONFLICT_BUTTON_STYLE;
+    public static final String REFRESH_BUTTON_STYLE = StyleConstants.REFRESH_BUTTON_STYLE;
+    public static final String EDIT_BUTTON_STYLE = StyleConstants.EDIT_BUTTON_STYLE;
+    public static final String WARNING_STYLE = StyleConstants.WARNING_STYLE;
+    public static final String TEXT_STYLE = StyleConstants.TEXT_STYLE;
     public static final int PREFERRED_BUTTON_SIZE = 50;
     private static final int ENTRY_CLICK_COUNT = 2;
     private static final int WIDTH = 1300;
@@ -165,6 +166,7 @@ public class CalendarApp extends Application {
         stage.setTitle("Select Profile to Edit");
 
         ListView<PersonalProfile> listView = new ListView<>();
+        listView.setStyle(TEXT_STYLE);
         if (personForms != null) {
             listView.getItems().addAll(personForms);
         }
@@ -174,11 +176,15 @@ public class CalendarApp extends Application {
             protected void updateItem(PersonalProfile item, boolean empty) {
                 super.updateItem(item, empty);
                 setText(empty || item == null ? "" : item.getName());
+                setStyle(TEXT_STYLE);
             }
         });
 
         Button editButton = new Button("Edit");
         Button closeButton = new Button("Close");
+
+        editButton.setStyle(StyleConstants.BUTTON_STYLE_LARGE);
+        closeButton.setStyle(StyleConstants.BUTTON_STYLE_LARGE);
 
         editButton.setOnAction(e -> {
             PersonalProfile selected = listView.getSelectionModel().getSelectedItem();

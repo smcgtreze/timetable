@@ -116,6 +116,7 @@ public class EmployeeFormProvider implements FormProvider<PersonalProfile> {
     public void showFormWindow(Stage stage, Form form, Runnable onSave) {
         FormRenderer renderer = new FormRenderer(form);
         Button saveButton = new Button("Save and Exit");
+        saveButton.setStyle(StyleConstants.BUTTON_STYLE_LARGE);
 
         BorderPane root = new BorderPane();
         HBox buttons = new HBox(buttonSpacing, saveButton);
@@ -144,6 +145,7 @@ public class EmployeeFormProvider implements FormProvider<PersonalProfile> {
         FormRenderer renderer = new FormRenderer(editForm);
 
         Button save = new Button("Save");
+        save.setStyle(StyleConstants.BUTTON_STYLE_MEDIUM);
         save.setOnAction(ev -> {
             mapper.fromForm(editForm, employee);
             onSave.run();   // refresh UI, re-save JSON, etc.
@@ -152,6 +154,7 @@ public class EmployeeFormProvider implements FormProvider<PersonalProfile> {
 
         VBox box = new VBox(10, renderer, save);
         box.setPadding(new Insets(10));
+        box.setStyle(StyleConstants.TEXT_STYLE);
 
         editStage.setScene(new Scene(box));
         editStage.show();

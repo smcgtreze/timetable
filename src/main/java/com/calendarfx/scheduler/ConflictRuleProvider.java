@@ -72,35 +72,52 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
         ComboBox<ConflictRule.FieldType> fieldBox = new ComboBox<>();
         fieldBox.getItems().addAll(ConflictRule.FieldType.values());
+        fieldBox.setStyle(StyleConstants.TEXT_STYLE);
 
         ComboBox<ConflictRule.Operator> operatorBox = new ComboBox<>();
         operatorBox.getItems().addAll(ConflictRule.Operator.values());
+        operatorBox.setStyle(StyleConstants.TEXT_STYLE);
 
         TextField valueField = new TextField();
+        valueField.setStyle(StyleConstants.TEXT_STYLE);
 
         CheckBox activeBox = new CheckBox("Active");
         activeBox.setSelected(true);
+        activeBox.setStyle(StyleConstants.TEXT_STYLE);
 
         Button defineRuleButton = new Button("Define Rule");
         Button duplicateRuleButton = new Button("Duplicate Rule");
         Button resolveButton = new Button("Resolve Conflicts!");
         Button applyButton = new Button("Apply resolutions");
+        
+        defineRuleButton.setStyle(StyleConstants.BUTTON_STYLE_MEDIUM);
+        duplicateRuleButton.setStyle(StyleConstants.BUTTON_STYLE_MEDIUM);
+        resolveButton.setStyle(StyleConstants.BUTTON_STYLE_MEDIUM);
+        applyButton.setStyle(StyleConstants.BUTTON_STYLE_MEDIUM);
 
         GridPane ruleBuilder = new GridPane();
         ruleBuilder.setHgap(HGAP);
         ruleBuilder.setVgap(VGAP);
 
         // Add an element to the GridPane in format: Label, Column, Row
-        ruleBuilder.add(new Label(FIELD), 0, 0);
+        Label fieldLabel = new Label(FIELD);
+        fieldLabel.setStyle(StyleConstants.TEXT_STYLE);
+        ruleBuilder.add(fieldLabel, 0, 0);
         ruleBuilder.add(fieldBox, 0, 1);
 
-        ruleBuilder.add(new Label(OPERATOR), 1, 0);
+        Label operatorLabel = new Label(OPERATOR);
+        operatorLabel.setStyle(StyleConstants.TEXT_STYLE);
+        ruleBuilder.add(operatorLabel, 1, 0);
         ruleBuilder.add(operatorBox, 1, 1);
 
-        ruleBuilder.add(new Label(VALUE), 2, 0);
+        Label valueLabel = new Label(VALUE);
+        valueLabel.setStyle(StyleConstants.TEXT_STYLE);
+        ruleBuilder.add(valueLabel, 2, 0);
         ruleBuilder.add(valueField, 2, 1);
 
-        ruleBuilder.add(new Label(ACTIVE), 3, 0);
+        Label activeLabel = new Label(ACTIVE);
+        activeLabel.setStyle(StyleConstants.TEXT_STYLE);
+        ruleBuilder.add(activeLabel, 3, 0);
         ruleBuilder.add(activeBox, 3, 1);
 
         ruleBuilder.add(defineRuleButton, 4, 1);
@@ -115,6 +132,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
         });
 
         Button saveButton = new Button(SAVE_AND_EXIT);
+        saveButton.setStyle(StyleConstants.BUTTON_STYLE_LARGE);
 
         HBox buttons = new HBox(buttonSpacing, saveButton);
         buttons.setAlignment(Pos.CENTER_LEFT);
@@ -123,6 +141,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
         layout.setPadding(new Insets(this.buttonSpacing));
 
         Label status = new Label();
+        status.setStyle(StyleConstants.TEXT_STYLE);
 
         CalendarView calendarView = calculator.getSnapshotCalendarView();
         VBox.setVgrow(calendarView, Priority.ALWAYS);
@@ -220,16 +239,20 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
     private void createSupportButtons(VBox ruleList, ConflictRule rule) {
         Label ruleLabel = new Label(formatRule(rule));
+        ruleLabel.setStyle(StyleConstants.TEXT_STYLE);
 
         CheckBox activeToggle = new CheckBox("Active");
         activeToggle.setSelected(rule.isActive());
+        activeToggle.setStyle(StyleConstants.TEXT_STYLE);
         activeToggle.selectedProperty().addListener((obs, old, val) -> rule.setActive(val));
 
         Button editButton = new Button("Edit");
         editButton.setTooltip(new Tooltip("Edit related rule"));
+        editButton.setStyle(StyleConstants.BUTTON_STYLE_SMALL);
 
         Button deleteButton = new Button("Delete");
         deleteButton.setTooltip(new Tooltip("Delete related rule"));
+        deleteButton.setStyle(StyleConstants.BUTTON_STYLE_SMALL);
 
         HBox ruleEntry = new HBox(10);
         ruleEntry.setAlignment(Pos.CENTER_LEFT);
@@ -256,6 +279,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
         FormRenderer renderer = new FormRenderer(editForm);
         Button save = new Button("Save");
+        save.setStyle(StyleConstants.BUTTON_STYLE_MEDIUM);
         save.setOnAction(ev -> {
             ruleLabel.setText(formatRule(rule)); // refresh label
             editStage.close();
