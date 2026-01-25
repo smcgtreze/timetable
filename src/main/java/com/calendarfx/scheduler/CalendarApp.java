@@ -34,9 +34,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Logger;
 
 public class CalendarApp extends Application {
 
+    private static final Logger LOGGER = Logger.getLogger(CalendarApp.class.getName());
     public static final String ADD_BUTTON_STYLE = "-fx-background-color: green; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String CONFLICT_BUTTON_STYLE = "-fx-background-color: orange; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
     public static final String REFRESH_BUTTON_STYLE = "-fx-background-color: red; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 20px;";
@@ -54,14 +56,13 @@ public class CalendarApp extends Application {
     public static final String EDIT_SIGN = "✎";
     private static List<GreatCalendar> cachedCalendars;
     private static PersistenceManager persistenceManager;
-    private static EventHandler<ActionEvent> cachedPersonHandler;
-    private static ConflictResolutionCalculator conflictCalculator;
+    private EventHandler<ActionEvent> cachedPersonHandler;
+    private ConflictResolutionCalculator conflictCalculator;
     private final List<String> preferredShift = Arrays.asList("nineToFive", "nineToSix", "eightToFour", "eightToFive");
     private static List<PersonalProfile> personForms;
     private static List<ConflictRule> ruleForms;
-    private static EventHandler<ActionEvent> cachedConflictHandler;
-    private static CalendarView calendarView;
-    private EmployeeFormProvider formProvider;
+    private EventHandler<ActionEvent> cachedConflictHandler;
+    private CalendarView calendarView;
 
     @Override
     public void start(Stage primaryStage) {
@@ -69,21 +70,17 @@ public class CalendarApp extends Application {
         CalendarSource familyCalendarSource = new CalendarSource("Family");
         calendarView.getCalendarSources().setAll(familyCalendarSource);
         calendarView.setRequestedTime(LocalTime.now());
-
-        try {
-            CSSFX.start();
-        } catch (Throwable ignored) {
-        }
+        CSSFX.start();
 
         // Add cached calendars
         if( cachedCalendars != null && !cachedCalendars.isEmpty()){
             cachedCalendars.forEach(calendar -> {
-                Calendar newCalendar = createCalendar( calendar.getName(), calendar.entries );
+                Calendar<?> newCalendar = createCalendar( calendar.getName(), calendar.entries );
                 familyCalendarSource.getCalendars().add(newCalendar);
             });
         }
 
-        formProvider = new EmployeeFormProvider(preferredShift, WIDTH, HEIGHT, BUTTON_SPACING);
+        EmployeeFormProvider formProvider = new EmployeeFormProvider(preferredShift, WIDTH, HEIGHT, BUTTON_SPACING);
 
         EventHandler<ActionEvent> addPersonHandler = e -> {
             Form form = formProvider.createForm();
@@ -94,11 +91,11 @@ public class CalendarApp extends Application {
                     personForms = new ArrayList<>();
                 }
                 personForms.add(profile);
-                Calendar calendar = createCalendar(profile.getName(), List.of());
+                Calendar<?> calendar = createCalendar(profile.getName(), List.of());
                 familyCalendarSource.getCalendars().add(calendar);
                 GreatCalendar gc = persistenceManager.calendarSerializer.fromCalendar(calendar);
                 cachedCalendars.add(gc);
-                setupPrimaryStage(primaryStage, calendarView, null, null);
+                setupPrimaryStage(primaryStage, calendarView, null, null, formProvider);
             });
         };
 
@@ -117,7 +114,7 @@ public class CalendarApp extends Application {
             }
             conflictRuleProvider.showFormWindow(primaryStage, form, () -> {
                 ruleForms = conflictRuleProvider.getRules();
-                setupPrimaryStage(primaryStage, calendarView, null, null);
+                setupPrimaryStage(primaryStage, calendarView, null, null, formProvider);
             });
         };
 
@@ -125,7 +122,7 @@ public class CalendarApp extends Application {
         conflictCalculator.setCalendarView(calendarView);
         conflictRuleProvider.setCalculator(conflictCalculator);
 
-        setupPrimaryStage(primaryStage, calendarView, addPersonHandler, addConflictRuleHandler);
+        setupPrimaryStage(primaryStage, calendarView, addPersonHandler, addConflictRuleHandler, formProvider);
     }
 
     private void refreshConflictsInView() {
@@ -198,7 +195,7 @@ public class CalendarApp extends Application {
         stage.show();
     }
 
-    private void setupPrimaryStage(Stage primaryStage, final CalendarView calendarView, EventHandler<ActionEvent> personHandler, EventHandler<ActionEvent> conflictHandler) {
+    private void setupPrimaryStage(Stage primaryStage, final CalendarView calendarView, EventHandler<ActionEvent> personHandler, EventHandler<ActionEvent> conflictHandler, EmployeeFormProvider formProvider) {
         refreshConflictsInView();
 
         // Regain handlers from cache if required
@@ -273,7 +270,7 @@ public class CalendarApp extends Application {
         // Save is done in stop().
     }
 
-    private static void saveInformation() {
+    private void saveInformation() {
         cachedCalendars = calendarView.getCalendars().stream()
                 .map(persistenceManager.calendarSerializer::fromCalendar)
                 .toList();
@@ -294,20 +291,26 @@ public class CalendarApp extends Application {
         try {
             saveInformation();
         } catch (Exception ex) {
-            System.err.println("Failed to save application state: " + ex.getMessage());
+            LOGGER.severe("Failed to save application state: " + ex.getMessage());
         }
         super.stop();
     }
 
-    private static Calendar createCalendar(String name, List<GreatCalendar.GreatEntry> entries ) {
-        Calendar calendar = new Calendar(name);
-        calendar.setShortName(name.substring(0,1));
+    private static Calendar<?> createCalendar(String name, List<GreatCalendar.GreatEntry> entries ) {
+        Calendar<?> calendar = new Calendar<>(name);
+        
+        // Guard against empty names
+        if (name != null && !name.isEmpty()) {
+            calendar.setShortName(name.substring(0, 1));
+        } else {
+            calendar.setShortName("?");
+        }
 
         if( entries != null && !entries.isEmpty() ) {
-            List<Entry> entriesToAdd = new ArrayList<>();
+            Entry<?>[] entriesToAdd = new Entry[entries.size()];
             entries.forEach(entry -> {
-                Entry entryToAdd = persistenceManager.calendarSerializer.toEntry( entry );
-                entriesToAdd.add( entryToAdd );
+                Entry<?> entryToAdd = persistenceManager.calendarSerializer.toEntry( entry );
+                entriesToAdd[ entries.indexOf(entry) ] = entryToAdd;
             });
 
             calendar.addEntries( entriesToAdd );

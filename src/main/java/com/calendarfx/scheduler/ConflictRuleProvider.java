@@ -30,7 +30,6 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
     public static final String VALUE = "Value";
     public static final String ACTIVE = "Active";
     public static final String SAVE_AND_EXIT = "Save and Exit";
-    private final List<String> preferredShift;
     private final int width;
     private final int height;
     private final int buttonSpacing;
@@ -40,7 +39,6 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
     private ConflictResolutionCalculator calculator;
 
     public ConflictRuleProvider(List<String> preferredShift, int width, int height, int buttonSpacing) {
-        this.preferredShift = preferredShift;
         this.width = width;
         this.height = height;
         this.buttonSpacing = buttonSpacing;
@@ -58,9 +56,9 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
         ruleList = new VBox(5);
         ruleList.setPadding(new Insets(this.buttonSpacing, 0, 0, 0));
 
-        rules.forEach((rule) -> {
-            createSupportButtons(ruleList, rule);
-        });
+        rules.forEach(rule ->
+            createSupportButtons(ruleList, rule)
+        );
 
         return Form.of(
         ).title("Rules");
@@ -78,7 +76,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
         TextField valueField = new TextField();
 
-        CheckBox activeBox = new CheckBox("Active");
+        CheckBox activeBox = new CheckBox(ACTIVE);
         activeBox.setSelected(true);
 
         Button defineRuleButton = new Button("Define Rule");
@@ -110,9 +108,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
 
         Map<String, ConflictRule> currentConflicts = calculator.getCurrentConflicts();
         ConflictTable conflictTable = new ConflictTable(currentConflicts);
-        calculator.getCurrentConflicts().addListener((MapChangeListener<String, ConflictRule>) change -> {
-            conflictTable.refreshData(calculator.getCurrentConflicts());
-        });
+        calculator.getCurrentConflicts().addListener((MapChangeListener<String, ConflictRule>) change -> conflictTable.refreshData(calculator.getCurrentConflicts()));
 
         Button saveButton = new Button(SAVE_AND_EXIT);
 
@@ -221,7 +217,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
     private void createSupportButtons(VBox ruleList, ConflictRule rule) {
         Label ruleLabel = new Label(formatRule(rule));
 
-        CheckBox activeToggle = new CheckBox("Active");
+        CheckBox activeToggle = new CheckBox(ACTIVE);
         activeToggle.setSelected(rule.isActive());
         activeToggle.selectedProperty().addListener((obs, old, val) -> rule.setActive(val));
 
@@ -235,9 +231,9 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
         ruleEntry.setAlignment(Pos.CENTER_LEFT);
 
         // EDIT RULE
-        editButton.setOnAction(e -> {
-            editRule(rule, ruleLabel);
-        });
+        editButton.setOnAction(e ->
+            editRule(rule, ruleLabel)
+        );
 
         // DELETE RULE
         deleteButton.setOnAction(e -> {
@@ -353,7 +349,7 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
     public class ConflictTable extends TableView<ConflictTable.Row> {
         public void refreshData(Map<String, ConflictRule> conflicts) {
             getItems().clear();
-            HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
+            Map<String,Entry<?>> entryMap = calculator.getEntriesMap();
             conflicts.forEach((entry, rule) ->
                     getItems().add(new Row(getEntryDescription(entryMap.get(entry)), rule.getFullName()))
             );
@@ -372,12 +368,12 @@ public class ConflictRuleProvider implements FormProvider<ConflictRule> {
             ruleCol.setCellValueFactory(c ->
                     new SimpleStringProperty(c.getValue().rule()));
 
-            getColumns().addAll(entryCol, ruleCol);
+            getColumns().addAll(List.of(entryCol, ruleCol));
 
-            HashMap<String, Entry<?>> entryMap = calculator.getEntriesMap();
-            conflicts.forEach((entry, rule) -> {
-                getItems().add(new Row(getEntryDescription( entryMap.get(entry) ), rule.getFullName()));
-            });
+            Map<String,Entry<?>> entryMap = calculator.getEntriesMap();
+            conflicts.forEach((entry, rule) ->
+                getItems().add(new Row(getEntryDescription( entryMap.get(entry) ), rule.getFullName()))
+            );
 
             setColumnResizePolicy(CONSTRAINED_RESIZE_POLICY);
             setPrefHeight(200);

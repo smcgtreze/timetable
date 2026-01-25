@@ -8,8 +8,8 @@ import java.util.List;
 public class GreatCalendarSerializer implements CalendarSerializer {
 
     @Override
-    public Calendar toCalendar(GreatCalendar gc) {
-        Calendar calendar = new Calendar(gc.getName());
+    public Calendar<?> toCalendar(GreatCalendar gc) {
+        Calendar<?> calendar = new Calendar<>(gc.getName());
         gc.getEntries().forEach(e -> calendar.addEntry( toEntry(e) ));
         return calendar;
     }
@@ -25,13 +25,12 @@ public class GreatCalendarSerializer implements CalendarSerializer {
     }
 
     @Override
-    public GreatCalendar fromCalendar(Calendar calendar) {
+    public GreatCalendar fromCalendar(Calendar<?> calendar) {
         List<GreatCalendar.GreatEntry> dtoEntries = calendar.findEntries("").stream()
-                .map(entry -> fromEntry((Entry<?>) entry))
+                .map(entry -> fromEntry(entry))
                 .toList();
 
-        GreatCalendar gc = new GreatCalendar(calendar.getName(), dtoEntries );
-        return gc;
+        return new GreatCalendar(calendar.getName(), dtoEntries );
     }
 
     @Override

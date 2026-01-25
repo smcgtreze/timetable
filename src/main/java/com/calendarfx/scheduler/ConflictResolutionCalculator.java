@@ -11,9 +11,12 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 public class ConflictResolutionCalculator {
+    private static final Logger LOGGER = Logger.getLogger(ConflictResolutionCalculator.class.getName());
     private final ObservableMap<String, ConflictRule> currentConflicts =
             FXCollections.observableHashMap();
     private final HashMap<String, Entry<?>> entriesMap = new HashMap<>();
@@ -44,7 +47,7 @@ public class ConflictResolutionCalculator {
         return currentConflicts;
     }
 
-    public HashMap<String, Entry<?>> getEntriesMap() {
+    public Map<String, Entry<?>> getEntriesMap() {
         return entriesMap;
     }
 
@@ -127,38 +130,23 @@ public class ConflictResolutionCalculator {
             ConflictRule.Operator operator = rule.getOperator();
             switch (rule.getField()) {
                 case NAME -> ruleConflict = calendarName.equals(rule.getValue());
-                case WORKING_HOURS -> {
-                    if (personalProfile != null) {
-                        ruleConflict = evaluate(rule.getValue(), operator, String.valueOf(personalProfile.getWorkingHours()));
-                    }
+                case WORKING_HOURS -> ruleConflict = personalProfile != null && evaluate(rule.getValue(), operator, String.valueOf(personalProfile.getWorkingHours()));
+                case PREFERRED_SHIFT ->
+                    ruleConflict = personalProfile instanceof PersonalProfile p
+                            && p.getPreferredShift() != null
+                            && evaluate(rule.getValue(), operator, p.getPreferredShift().toString());
+                case JOB -> ruleConflict = personalProfile instanceof PersonalProfile p && p.getJob() != null 
+                            && evaluate(rule.getValue(), operator, p.getJob().toString());
+                case EMAIL -> ruleConflict = personalProfile instanceof PersonalProfile p && p.getEmail() != null 
+                        && evaluate(rule.getValue(), operator, p.getEmail().toString());
                 }
-                case PREFERRED_SHIFT -> {
-                    if (personalProfile != null) {
-                        Object preferredShift = personalProfile.getPreferredShift();
-                        ruleConflict = preferredShift != null && evaluate(rule.getValue(), operator, preferredShift.toString());
-                    }
-                }
-                case JOB -> {
-                    if (personalProfile != null) {
-                        Object job = personalProfile.getJob();
-                        ruleConflict = job != null && evaluate(rule.getValue(), operator, job.toString());
-                    }
-                }
-                case EMAIL -> {
-                    if (personalProfile != null) {
-                        Object email = personalProfile.getEmail();
-                        ruleConflict = email != null && evaluate(rule.getValue(), operator, email.toString());
-                    }
-                }
-            }
 
-            if (ruleConflict) {
-                existsConflict = true;
-                // look up the entry in the snapshot (not the original) to preserve snapshot state
-                Optional<Entry<?>> optEntry = findEntryById(snapshotCalendarView, entry.getId());
-                optEntry.ifPresent(snapshotEntry -> entriesMap.put(entry.getId(), snapshotEntry));
-                currentConflicts.put(entry.getId(), rule);
-            }
+            if (ruleConflict){
+            existsConflict = true;
+            // look up the entry in the snapshot (not the original) to preserve snapshot state
+            Optional<Entry<?>> optEntry = findEntryById(snapshotCalendarView, entry.getId());
+            optEntry.ifPresent(snapshotEntry -> entriesMap.put(entry.getId(), snapshotEntry));
+            currentConflicts.put(entry.getId(), rule);}
         }
         return existsConflict;
     }
@@ -188,8 +176,6 @@ public class ConflictResolutionCalculator {
     }
 
     public boolean calculate() {
-
-        List<ConflictResult> conflictResults = new ArrayList<>();
         List<Entry<?>> resolvedEntries = new ArrayList<>();
 
         // Iterate safely over a snapshot of the key set to avoid concurrent-modification surprises
@@ -199,15 +185,19 @@ public class ConflictResolutionCalculator {
 
             // Skip if entry is null - shouldn't happen but safety check
             if (entry == null) {
-                System.err.println("Warning: Entry with ID " + entryId + " not found in entriesMap.");
+                if (LOGGER.isLoggable(java.util.logging.Level.WARNING)) {
+                    LOGGER.warning(String.format("Entry with ID %s not found in entriesMap.", entryId));
+                }
                 continue;
             }
 
-            boolean solved = switch (rule.getField()) {
+            switch (rule.getField()) {
                 case WORKING_HOURS -> solveWorkingHours(entry, rule);
                 case PREFERRED_SHIFT -> solvePreferredShift(entry, rule);
-                default -> false;
-            };
+                default -> {
+                    // Other conflict fields (NAME, JOB, EMAIL) do not require resolution
+                }
+            }
 
             // After attempting resolution, re-check conflict
             boolean stillConflicted = hasConflict(entry);
@@ -215,8 +205,6 @@ public class ConflictResolutionCalculator {
             if (!stillConflicted) {
                 resolvedEntries.add(entry);
             }
-
-            conflictResults.add(new ConflictResult(entry, !stillConflicted));
         }
 
         // Remove resolved entries AFTER iteration
