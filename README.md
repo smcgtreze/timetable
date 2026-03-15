@@ -460,14 +460,5 @@ diagrams/
 
 ---
 
-## Extended Documentation
-
-For more detailed information, see:
-- [FEATURES_AND_USAGE.md](docs/FEATURES_AND_USAGE.md) - Complete feature guide
-- [QUICK_START.md](docs/QUICK_START.md) - Quick reference
-- [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md) - Developer architecture guide
-
----
-
 Latest Update: March 2026
 
