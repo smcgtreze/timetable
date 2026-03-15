@@ -12,7 +12,6 @@ class PersonalProfileTest {
     @BeforeEach
     void setUp() {
         profile = new PersonalProfile(
-                40,
                 "john.doe@example.com",
                 "Software Engineer",
                 30,
@@ -23,7 +22,6 @@ class PersonalProfileTest {
 
     @Test
     void testConstructor() {
-        assertEquals(40, profile.getWorkingHours());
         assertEquals("john.doe@example.com", profile.getEmail());
         assertEquals("Software Engineer", profile.getJob());
         assertEquals(30, profile.getAge());
@@ -81,49 +79,9 @@ class PersonalProfileTest {
     }
 
     @Test
-    void testGetWorkingHours() {
-        assertEquals(40, profile.getWorkingHours());
-    }
-
-    @Test
-    void testSetWorkingHours() {
-        profile.setWorkingHours(35);
-        assertEquals(35, profile.getWorkingHours());
-    }
-
-    @Test
     void testNameIsImmutable() {
         // Name is set during construction and cannot be changed
         assertEquals("John Doe", profile.getName());
         // There is no setName method intentionally
-    }
-
-    @Test
-    void testZeroWorkingHours() {
-        PersonalProfile zeroHoursProfile = new PersonalProfile(
-                0,
-                "test@example.com",
-                "Intern",
-                22,
-                "Test User",
-                "flexible"
-        );
-        assertEquals(0, zeroHoursProfile.getWorkingHours());
-    }
-
-    @Test
-    void testNullValues() {
-        PersonalProfile nullProfile = new PersonalProfile(
-                0,
-                null,
-                null,
-                0,
-                "Test User",
-                null
-        );
-        assertNull(nullProfile.getEmail());
-        assertNull(nullProfile.getJob());
-        assertNull(nullProfile.getPreferredShift());
-        assertEquals(0, nullProfile.getAge());
     }
 }

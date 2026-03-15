@@ -71,5 +71,24 @@ class GreatCalendarTest {
         greatCalendar = new GreatCalendar("TestCalendar", null);
         assertNull(greatCalendar.getEntries());
     }
-}
 
+    @Test
+    void testGetWorkingHours() {
+        assertEquals(0, greatCalendar.getWorkingHours());
+    }
+
+    @Test
+    void testSetWorkingHours() {
+        greatCalendar.setWorkingHours(40);
+        assertEquals(40, greatCalendar.getWorkingHours());
+    }
+
+    @Test
+    void testSetWorkingHoursMultipleTimes() {
+        greatCalendar.setWorkingHours(35);
+        assertEquals(35, greatCalendar.getWorkingHours());
+        
+        greatCalendar.setWorkingHours(45);
+        assertEquals(45, greatCalendar.getWorkingHours());
+    }
+}

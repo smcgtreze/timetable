@@ -9,6 +9,7 @@ import java.util.List;
 public class GreatCalendar {
     private final String name;
     protected List<GreatEntry> entries;
+    private int workingHours;
 
     @JsonCreator
     public GreatCalendar(@JsonProperty("name") String name
@@ -16,8 +17,8 @@ public class GreatCalendar {
                          ) {
         this.name = name;
         this.entries = entries;
+        this.workingHours = 0;
     }
-
 
     @JsonProperty
     public String getName() {
@@ -27,6 +28,14 @@ public class GreatCalendar {
     @JsonProperty
     public List<GreatEntry> getEntries() {
         return entries;
+    }
+
+    public int getWorkingHours() {
+        return workingHours;
+    }
+
+    public void setWorkingHours(int workingHours) {
+        this.workingHours = workingHours;
     }
 
     public static class GreatEntry {
